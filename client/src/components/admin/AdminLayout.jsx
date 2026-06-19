@@ -6,9 +6,11 @@ import {
   Tags, 
   ShoppingCart, 
   Users, 
+  ShieldAlert,
   LogOut,
   Menu,
-  X
+  X,
+  Globe
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -28,7 +30,8 @@ const AdminLayout = () => {
     { name: 'Products', path: '/admin/products', icon: Package },
     { name: 'Categories', path: '/admin/categories', icon: Tags },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
-    { name: 'Users', path: '/admin/users', icon: Users },
+    { name: 'Customers', path: '/admin/users', icon: Users },
+    { name: 'Admins', path: '/admin/admins', icon: ShieldAlert },
   ];
 
   return (
@@ -107,6 +110,13 @@ const AdminLayout = () => {
           </div>
           
           <div className="flex items-center gap-4">
+            <Link 
+              to="/" 
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+            >
+              <Globe size={18} />
+              <span className="hidden sm:block">View Store</span>
+            </Link>
             <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
               <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
                 {user?.name?.charAt(0).toUpperCase() || 'A'}

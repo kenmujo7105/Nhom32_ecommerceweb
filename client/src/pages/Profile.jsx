@@ -1,3 +1,4 @@
+import { formatCurrency } from '../utils/formatters';
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Package, Save } from 'lucide-react';
@@ -132,7 +133,7 @@ const Profile = () => {
                           <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-gray-900 text-lg">${parseFloat(order.total_price).toFixed(2)}</p>
+                          <p className="font-bold text-gray-900 text-lg">{formatCurrency(parseFloat(order.total_price))}</p>
                           <span className={`inline-block px-3 py-1 mt-2 rounded-full text-xs font-bold uppercase
                             ${order.status === 'completed' || order.status === 'delivered' ? 'bg-green-100 text-green-700' : 
                               order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 

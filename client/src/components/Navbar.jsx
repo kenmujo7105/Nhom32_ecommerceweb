@@ -5,12 +5,13 @@ import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 
 const Navbar = () => {
-  const { getCartCount } = useContext(CartContext);
+  const { getCartCount, clearCart } = useContext(CartContext);
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
+    clearCart();
     navigate('/');
   };
 
@@ -31,11 +32,16 @@ const Navbar = () => {
 
             {user ? (
               <div className="flex items-center space-x-4">
+                {(user?.role === 'admin' || user?.role === 'Admin') && (
+                  <Link to="/admin/dashboard" className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors font-bold text-sm flex items-center shadow-md">
+                    ⚡ Admin Panel
+                  </Link>
+                )}
                 <Link to="/profile" className="text-gray-600 hover:text-primary transition-colors flex items-center gap-1">
                   <User size={20} />
                   <span className="hidden md:inline font-medium">{user.name}</span>
                 </Link>
-                <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition-colors">
+                <button onClick={handleLogout} className="text-gray-600 hover:text-red-500 transition-colors" title="Logout">
                   <LogOut size={20} />
                 </button>
               </div>

@@ -1,6 +1,7 @@
+import { formatCurrency } from '../utils/formatters';
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Minus, Plus, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api/axios';
 import { CartContext } from '../context/CartContext';
 
@@ -13,6 +14,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [mainImage, setMainImage] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -20,6 +22,8 @@ const ProductDetail = () => {
         const res = await api.get(`/products/${id}`);
         if (res.data.success) {
           setProduct(res.data.data);
+          const imgUrl = res.data.data.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80';
+          setMainImage(imgUrl);
         }
       } catch (error) {
         console.error("Failed to fetch product", error);
@@ -46,6 +50,31 @@ const ProductDetail = () => {
   const price = parseFloat(product.price);
   const salePrice = product.sale_price ? parseFloat(product.sale_price) : null;
   const imageUrl = product.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80';
+  
+  let parsedGallery = [];
+  try {
+    if (typeof product.gallery_images === 'string') {
+      parsedGallery = JSON.parse(product.gallery_images);
+    } else if (Array.isArray(product.gallery_images)) {
+      parsedGallery = product.gallery_images;
+    }
+  } catch (e) {
+    console.error("Failed to parse gallery images");
+  }
+
+  const galleryImages = parsedGallery.length > 0 ? parsedGallery : [imageUrl];
+
+  const handleNextImage = () => {
+    const currentIndex = galleryImages.indexOf(mainImage);
+    const nextIndex = (currentIndex + 1) % galleryImages.length;
+    setMainImage(galleryImages[nextIndex]);
+  };
+
+  const handlePrevImage = () => {
+    const currentIndex = galleryImages.indexOf(mainImage);
+    const prevIndex = (currentIndex - 1 + galleryImages.length) % galleryImages.length;
+    setMainImage(galleryImages[prevIndex]);
+  };
 
   const handleAddToCart = () => {
     setAdding(true);
@@ -65,11 +94,44 @@ const ProductDetail = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Image Gallery */}
-          <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-square relative">
-            <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" />
-            {salePrice && (
-              <div className="absolute top-4 left-4 bg-red-500 text-white font-bold px-4 py-2 rounded-full shadow-lg">
-                SALE
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl overflow-hidden bg-gray-100 aspect-square relative group">
+              <img src={mainImage} alt={product.name} className="w-full h-full object-cover transition-opacity duration-300" />
+              {salePrice && (
+                <div className="absolute top-4 left-4 bg-red-500 text-white font-bold px-4 py-2 rounded-full shadow-lg">
+                  SALE
+                </div>
+              )}
+              {galleryImages.length > 1 && (
+                <>
+                  <button 
+                    onClick={handlePrevImage} 
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  <button 
+                    onClick={handleNextImage} 
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
+                </>
+              )}
+            </div>
+            {galleryImages.length > 1 && (
+              <div className="grid grid-cols-5 gap-3">
+                {galleryImages.map((img, idx) => (
+                  <button 
+                    key={idx}
+                    onClick={() => setMainImage(img)}
+                    className={`rounded-xl overflow-hidden aspect-square border-2 transition-all ${
+                      mainImage === img ? 'border-primary scale-105' : 'border-transparent hover:border-gray-300'
+                    }`}
+                  >
+                    <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -81,16 +143,16 @@ const ProductDetail = () => {
             <div className="flex items-center gap-4 mb-6">
               {salePrice ? (
                 <>
-                  <span className="text-3xl font-bold text-gray-900">${salePrice.toFixed(2)}</span>
-                  <span className="text-xl text-gray-400 line-through">${price.toFixed(2)}</span>
+                  <span className="text-3xl font-bold text-gray-900">{formatCurrency(salePrice)}</span>
+                  <span className="text-xl text-gray-400 line-through">{formatCurrency(price)}</span>
                 </>
               ) : (
-                <span className="text-3xl font-bold text-gray-900">${price.toFixed(2)}</span>
+                <span className="text-3xl font-bold text-gray-900">{formatCurrency(price)}</span>
               )}
             </div>
 
-            <p className="text-gray-600 text-lg mb-8 leading-relaxed whitespace-pre-line">
-              {product.description || "No description available for this product."}
+            <p className="text-gray-600 text-lg mb-8 leading-relaxed line-clamp-3">
+              {product.description || "Premium product with exceptional build quality. Click below to read more details."}
             </p>
 
             <div className="mb-8">
@@ -132,6 +194,53 @@ const ProductDetail = () => {
                 <ShoppingCart size={22} />
                 {adding ? 'Added!' : 'Add to Cart'}
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Product Description Section */}
+        <div className="mt-20">
+          <div className="border-b border-gray-200 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 pb-4 inline-block border-b-2 border-primary">
+              Product Description
+            </h2>
+          </div>
+          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm leading-relaxed text-gray-700 text-lg">
+            <p className="whitespace-pre-line mb-6">
+              {product.description || "Discover the perfect blend of innovation and style with this premium product. Designed with meticulous attention to detail, it offers unparalleled performance and durability. Whether you're upgrading your lifestyle or looking for a reliable companion, this product exceeds expectations on every front."}
+            </p>
+            <div className="grid md:grid-cols-2 gap-8 mt-10">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Key Features</h3>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>High-quality premium materials</li>
+                  <li>Sleek, modern, and ergonomic design</li>
+                  <li>Built for durability and long-term use</li>
+                  <li>100% authentic and factory tested</li>
+                  <li>Includes 1-year standard warranty</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Specifications</h3>
+                <ul className="space-y-3">
+                  <li className="flex justify-between border-b border-gray-100 pb-2">
+                    <span className="text-gray-500">Brand</span>
+                    <span className="font-medium text-gray-900">AuraShop Exclusive</span>
+                  </li>
+                  <li className="flex justify-between border-b border-gray-100 pb-2">
+                    <span className="text-gray-500">Category</span>
+                    <span className="font-medium text-gray-900">{product.category_id ? 'Categorized' : 'General'}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-gray-100 pb-2">
+                    <span className="text-gray-500">Stock Status</span>
+                    <span className="font-medium text-gray-900">{product.stock > 0 ? 'In Stock' : 'Out of Stock'}</span>
+                  </li>
+                  <li className="flex justify-between border-b border-gray-100 pb-2">
+                    <span className="text-gray-500">Shipping</span>
+                    <span className="font-medium text-gray-900">2-4 Business Days</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>

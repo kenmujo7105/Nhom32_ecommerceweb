@@ -21,11 +21,14 @@ const AdminLogin = () => {
     try {
       const res = await api.post('/auth/login', { email, password });
       if (res.data.success) {
-        // Assume admin check is either handled by backend or we check role here
-        // If your backend doesn't prevent normal users, we should check role:
-        // if (res.data.data.role !== 'admin') throw new Error("Unauthorized");
+        const loggedUser = res.data.data.user;
+        const token = res.data.data.token;
         
-        login(res.data.token, res.data.data);
+        if (loggedUser.role !== 'admin') {
+          throw new Error("You do not have permission to access the admin portal.");
+        }
+        
+        login(token, loggedUser);
         navigate('/admin/dashboard');
       }
     } catch (err) {

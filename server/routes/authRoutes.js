@@ -24,6 +24,8 @@ const passwordValidation = [
 // Public routes
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
 
 // Protected routes
 router.post('/change-password', verifyToken, passwordValidation, authController.changePassword);

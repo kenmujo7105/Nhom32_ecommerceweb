@@ -10,44 +10,52 @@ exports.getAllProducts = async (req, res) => {
     
     const { search, category_id, min_price, max_price, sort_by, sort_order } = req.query;
 
-    let query = 'SELECT * FROM products WHERE 1=1';
-    let countQuery = 'SELECT COUNT(*) as total FROM products WHERE 1=1';
+    let query = 'SELECT p.*, c.name as category FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1';
     const params = [];
     const countParams = [];
 
     if (search) {
-      query += ' AND name LIKE ?';
-      countQuery += ' AND name LIKE ?';
+      query += ' AND p.name LIKE ?';
+      countQuery += ' AND p.name LIKE ?';
       params.push(`%${search}%`);
       countParams.push(`%${search}%`);
     }
 
     if (category_id) {
-      query += ' AND category_id = ?';
-      countQuery += ' AND category_id = ?';
+      query += ' AND p.category_id = ?';
+      countQuery += ' AND p.category_id = ?';
       params.push(category_id);
       countParams.push(category_id);
     }
+    
+    // Support filtering by category name from Admin Dashboard
+    if (req.query.category) {
+      query += ' AND c.name = ?';
+      countQuery += ' AND c.name = ?';
+      params.push(req.query.category);
+      countParams.push(req.query.category);
+    }
 
     if (min_price) {
-      query += ' AND price >= ?';
-      countQuery += ' AND price >= ?';
+      query += ' AND p.price >= ?';
+      countQuery += ' AND p.price >= ?';
       params.push(min_price);
       countParams.push(min_price);
     }
 
     if (max_price) {
-      query += ' AND price <= ?';
-      countQuery += ' AND price <= ?';
+      query += ' AND p.price <= ?';
+      countQuery += ' AND p.price <= ?';
       params.push(max_price);
       countParams.push(max_price);
     }
 
     // Sorting
-    const validSortColumns = ['price', 'name', 'created_at'];
+    const validSortColumns = ['price', 'name', 'created_at', 'stock'];
     const validSortOrders = ['ASC', 'DESC'];
     
-    const sortColumn = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
+    const sortColumn = validSortColumns.includes(sort_by) ? `p.${sort_by}` : 'p.created_at';
     const sortDir = validSortOrders.includes(sort_order?.toUpperCase()) ? sort_order.toUpperCase() : 'DESC';
     
     query += ` ORDER BY ${sortColumn} ${sortDir}`;
@@ -102,11 +110,11 @@ exports.createProduct = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Validation error', data: errors.array() });
   }
 
-  const { category_id, name, slug, description, price, sale_price, image_url, stock } = req.body;
+  const { category_id, name, slug, description, price, sale_price, image_url, gallery_images, stock } = req.body;
   try {
     const [result] = await db.query(
-      'INSERT INTO products (category_id, name, slug, description, price, sale_price, image_url, stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [category_id, name, slug, description, price, sale_price || null, image_url || null, stock || 0]
+      'INSERT INTO products (category_id, name, slug, description, price, sale_price, image_url, gallery_images, stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [category_id, name, slug, description, price, sale_price || null, image_url || null, gallery_images ? JSON.stringify(gallery_images) : null, stock || 0]
     );
     res.status(201).json({
       success: true,
@@ -130,12 +138,12 @@ exports.updateProduct = async (req, res) => {
   }
 
   const { id } = req.params;
-  const { category_id, name, slug, description, price, sale_price, image_url, stock } = req.body;
+  const { category_id, name, slug, description, price, sale_price, image_url, gallery_images, stock } = req.body;
 
   try {
     const [result] = await db.query(
-      'UPDATE products SET category_id = ?, name = ?, slug = ?, description = ?, price = ?, sale_price = ?, image_url = ?, stock = ? WHERE id = ?',
-      [category_id, name, slug, description, price, sale_price || null, image_url || null, stock || 0, id]
+      'UPDATE products SET category_id = ?, name = ?, slug = ?, description = ?, price = ?, sale_price = ?, image_url = ?, gallery_images = ?, stock = ? WHERE id = ?',
+      [category_id, name, slug, description, price, sale_price || null, image_url || null, gallery_images ? JSON.stringify(gallery_images) : null, stock || 0, id]
     );
     
     if (result.affectedRows === 0) {

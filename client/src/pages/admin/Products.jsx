@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../utils/formatters';
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import api from '../../api/axios';
@@ -15,11 +16,13 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   // Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState({ id: null, name: '', price: '', category: '', image: '', description: '', stock: '' });
+  const [formData, setFormData] = useState({ id: null, name: '', price: '', category_id: '', image: '', description: '', stock: '' });
 
   // Delete state
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -28,19 +31,19 @@ const Products = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-  }, [page, search, categoryFilter]);
+  }, [page, search, categoryFilter, sortField, sortOrder]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       // Pass params for pagination/search
       const res = await api.get('/products', { 
-        params: { page, search, category: categoryFilter, limit: 10 } 
+        params: { page, search, category: categoryFilter, sort_by: sortField, sort_order: sortOrder, limit: 10 } 
       });
       if (res.data && res.data.data) {
         // Handle standard pagination response structure
         setProducts(res.data.data);
-        setTotalPages(res.data.pagination?.totalPages || 1);
+        setTotalPages(Math.ceil((res.data.pagination?.total || 0) / (res.data.pagination?.limit || 10)) || 1);
       } else if (Array.isArray(res.data)) {
         // Handle simple array response
         let filtered = [...res.data];
@@ -78,14 +81,14 @@ const Products = () => {
         id: product._id || product.id, 
         name: product.name, 
         price: product.price, 
-        category: product.category, 
+        category_id: product.category_id || '', 
         image: product.image || product.imageUrl || '', 
         description: product.description || '',
         stock: product.stock || 0
       });
     } else {
       setIsEditMode(false);
-      setFormData({ id: null, name: '', price: '', category: '', image: '', description: '', stock: '' });
+      setFormData({ id: null, name: '', price: '', category_id: '', image: '', description: '', stock: '' });
     }
     setIsModalOpen(true);
   };
@@ -125,6 +128,8 @@ const Products = () => {
   const columns = [
     { 
       header: 'Product', 
+      field: 'name',
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
           <img 
@@ -140,8 +145,8 @@ const Products = () => {
       ) 
     },
     { header: 'Category', field: 'category' },
-    { header: 'Price', render: (row) => <span className="font-medium">${Number(row.price).toFixed(2)}</span> },
-    { header: 'Stock', render: (row) => (
+    { header: 'Price', field: 'price', sortable: true, render: (row) => <span className="font-medium">{formatCurrency(Number(row.price))}</span> },
+    { header: 'Stock', field: 'stock', sortable: true, render: (row) => (
       <span className={`px-2 py-1 text-xs rounded-md ${row.stock > 10 ? 'bg-emerald-100 text-emerald-700' : row.stock > 0 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
         {row.stock || 0} in stock
       </span>
@@ -219,6 +224,9 @@ const Products = () => {
         page={page} 
         totalPages={totalPages} 
         onPageChange={setPage} 
+        onSort={(field, order) => { setSortField(field); setSortOrder(order); setPage(1); }}
+        sortField={sortField}
+        sortOrder={sortOrder}
         keyField="_id"
       />
 
@@ -268,13 +276,13 @@ const Products = () => {
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
             <select 
               required
-              value={formData.category}
-              onChange={e => setFormData({...formData, category: e.target.value})}
+              value={formData.category_id}
+              onChange={e => setFormData({...formData, category_id: e.target.value})}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
             >
               <option value="" disabled>Select category</option>
               {categories.map(cat => (
-                <option key={cat._id || cat.id} value={cat.name}>{cat.name}</option>
+                <option key={cat._id || cat.id} value={cat._id || cat.id}>{cat.name}</option>
               ))}
             </select>
           </div>

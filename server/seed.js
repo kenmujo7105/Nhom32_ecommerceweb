@@ -614,10 +614,21 @@ async function seed() {
     for (const prod of allProducts) {
       const catId = categoryIdMap[prod.category_slug];
       const slug = prod.slug || slugify(prod.name);
+      
+      const extraImages = prod.category_slug === 'dien-thoai' 
+        ? ['https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=800&q=80', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80', 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=800&q=80', 'https://images.unsplash.com/photo-1580910051074-3eb694886505?w=800&q=80']
+        : prod.category_slug === 'laptop'
+        ? ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80', 'https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=800&q=80', 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&q=80', 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=800&q=80']
+        : prod.category_slug === 'am-thanh'
+        ? ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80', 'https://images.unsplash.com/photo-1588449668365-d15e397f6787?w=800&q=80', 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80', 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&q=80']
+        : ['https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80', 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&q=80', 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&q=80', 'https://images.unsplash.com/photo-1600080972464-8e5f35f63d08?w=800&q=80'];
+
+      const gallery = JSON.stringify([prod.image_url, ...extraImages]);
+
       await db.query(
-        `INSERT INTO products (category_id, name, slug, description, price, sale_price, image_url, stock)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [catId, prod.name, slug, prod.description, prod.price, prod.sale_price, prod.image_url, prod.stock]
+        `INSERT INTO products (category_id, name, slug, description, price, sale_price, image_url, gallery_images, stock)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [catId, prod.name, slug, prod.description, prod.price, prod.sale_price, prod.image_url, gallery, prod.stock]
       );
       console.log(`Inserted Product: ${prod.name}`);
     }

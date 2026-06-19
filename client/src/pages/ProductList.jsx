@@ -17,6 +17,8 @@ const ProductList = () => {
     page: parseInt(searchParams.get('page')) || 1,
     category_id: searchParams.get('category_id') || '',
     search: searchParams.get('search') || '',
+    min_price: searchParams.get('min_price') || '',
+    max_price: searchParams.get('max_price') || '',
     sort_by: searchParams.get('sort_by') || 'created_at',
     sort_order: searchParams.get('sort_order') || 'DESC'
   });
@@ -27,6 +29,8 @@ const ProductList = () => {
     if (filters.page > 1) params.set('page', filters.page);
     if (filters.category_id) params.set('category_id', filters.category_id);
     if (filters.search) params.set('search', filters.search);
+    if (filters.min_price) params.set('min_price', filters.min_price);
+    if (filters.max_price) params.set('max_price', filters.max_price);
     if (filters.sort_by !== 'created_at') params.set('sort_by', filters.sort_by);
     if (filters.sort_order !== 'DESC') params.set('sort_order', filters.sort_order);
     
@@ -43,6 +47,8 @@ const ProductList = () => {
           limit: 12,
           ...(filters.category_id && { category_id: filters.category_id }),
           ...(filters.search && { search: filters.search }),
+          ...(filters.min_price && { min_price: filters.min_price }),
+          ...(filters.max_price && { max_price: filters.max_price }),
           sort_by: filters.sort_by,
           sort_order: filters.sort_order
         }).toString();
@@ -103,7 +109,7 @@ const ProductList = () => {
             <h3 className="text-2xl font-bold text-gray-900 mb-2">No products found</h3>
             <p className="text-gray-500">Try adjusting your filters or search criteria.</p>
             <button 
-              onClick={() => setFilters({ page: 1, category_id: '', search: '', sort_by: 'created_at', sort_order: 'DESC' })}
+              onClick={() => setFilters({ page: 1, category_id: '', search: '', min_price: '', max_price: '', sort_by: 'created_at', sort_order: 'DESC' })}
               className="mt-6 text-primary font-medium hover:underline"
             >
               Clear all filters
