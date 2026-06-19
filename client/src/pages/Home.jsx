@@ -75,7 +75,13 @@ const Home = () => {
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
                 <img 
-                  src={`https://images.unsplash.com/photo-${1500000000000 + idx * 100000}?w=500&q=80`} // placeholder images
+                  src={
+                    category.slug === 'dien-thoai' ? 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80' :
+                    category.slug === 'laptop' ? 'https://images.unsplash.com/photo-1496181130204-7552cc14ac1a?w=500&q=80' :
+                    category.slug === 'am-thanh' ? 'https://images.unsplash.com/photo-1484755560693-a4074577af3a?w=500&q=80' :
+                    category.slug === 'phu-kien' ? 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=500&q=80' :
+                    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500&q=80'
+                  }
                   alt={category.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />
