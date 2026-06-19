@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import Pagination from './Pagination';
 
 const DataTable = ({ 
@@ -9,8 +10,17 @@ const DataTable = ({
   page, 
   totalPages, 
   onPageChange,
+  onSort,
+  sortField,
+  sortOrder,
   emptyMessage = "No records found"
 }) => {
+  const handleSortClick = (field, isSortable) => {
+    if (!isSortable || !onSort || !field) return;
+    const newOrder = field === sortField && sortOrder === 'asc' ? 'desc' : 'asc';
+    onSort(field, newOrder);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -18,8 +28,23 @@ const DataTable = ({
           <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b border-slate-200">
             <tr>
               {columns.map((col, index) => (
-                <th key={index} className="px-6 py-4 whitespace-nowrap">
-                  {col.header}
+                <th 
+                  key={index} 
+                  className={`px-6 py-4 whitespace-nowrap select-none ${col.sortable && col.field ? 'cursor-pointer hover:bg-slate-100' : ''}`}
+                  onClick={() => handleSortClick(col.field, col.sortable)}
+                >
+                  <div className="flex items-center gap-1">
+                    {col.header}
+                    {col.sortable && col.field && sortField === col.field && (
+                      sortOrder === 'asc' ? <ArrowUp size={14} className="text-indigo-500" /> : <ArrowDown size={14} className="text-indigo-500" />
+                    )}
+                    {col.sortable && col.field && sortField !== col.field && (
+                      <div className="flex flex-col text-slate-300 opacity-50">
+                        <ArrowUp size={10} className="-mb-1" />
+                        <ArrowDown size={10} />
+                      </div>
+                    )}
+                  </div>
                 </th>
               ))}
             </tr>

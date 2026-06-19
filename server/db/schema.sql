@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
     address TEXT,
     role ENUM('customer', 'admin') DEFAULT 'customer',
     is_active BOOLEAN DEFAULT TRUE,
+    reset_code VARCHAR(10) NULL,
+    reset_code_expiry DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,6 +31,7 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(10, 2) NOT NULL,
     sale_price DECIMAL(10, 2),
     image_url VARCHAR(255),
+    gallery_images JSON DEFAULT NULL,
     stock INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT

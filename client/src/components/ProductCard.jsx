@@ -1,3 +1,4 @@
+import { formatCurrency } from '../utils/formatters';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag } from 'lucide-react';
@@ -27,11 +28,11 @@ const ProductCard = ({ product }) => {
           <div className="flex items-center gap-2">
             {salePrice ? (
               <>
-                <span className="text-xl font-bold text-gray-900">${salePrice.toFixed(2)}</span>
-                <span className="text-sm text-gray-400 line-through">${price.toFixed(2)}</span>
+                <span className="text-xl font-bold text-gray-900">{formatCurrency(salePrice)}</span>
+                <span className="text-sm text-gray-400 line-through">{formatCurrency(price)}</span>
               </>
             ) : (
-              <span className="text-xl font-bold text-gray-900">${price.toFixed(2)}</span>
+              <span className="text-xl font-bold text-gray-900">{formatCurrency(price)}</span>
             )}
           </div>
           <div className="bg-primary/10 p-2 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">

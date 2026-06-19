@@ -4,11 +4,60 @@ const { validationResult } = require('express-validator');
 // GET /api/categories
 exports.getAllCategories = async (req, res) => {
   try {
-    const [categories] = await db.query('SELECT * FROM categories ORDER BY created_at DESC');
+    const { search, sort_by, sort_order, page, limit } = req.query;
+
+    let query = `
+      SELECT c.*, COALESCE(SUM(p.stock), 0) as total_stock 
+      FROM categories c 
+      LEFT JOIN products p ON c.id = p.category_id 
+      WHERE 1=1
+    `;
+    let countQuery = 'SELECT COUNT(*) as total FROM categories c WHERE 1=1';
+    const params = [];
+    const countParams = [];
+    
+    if (search) {
+      query += ' AND c.name LIKE ?';
+      countQuery += ' AND c.name LIKE ?';
+      params.push(`%${search}%`);
+      countParams.push(`%${search}%`);
+    }
+
+    const validSortColumns = ['name', 'created_at', 'total_stock'];
+    const validSortOrders = ['ASC', 'DESC'];
+    
+    const sortColumn = validSortColumns.includes(sort_by) ? (sort_by === 'total_stock' ? 'total_stock' : `c.${sort_by}`) : 'c.created_at';
+    const sortDir = validSortOrders.includes(sort_order?.toUpperCase()) ? sort_order.toUpperCase() : 'DESC';
+
+    query += ' GROUP BY c.id';
+    query += ` ORDER BY ${sortColumn} ${sortDir}`;
+    
+    let paginationData = null;
+
+    if (page) {
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 10;
+      const offset = (pageNum - 1) * limitNum;
+      
+      query += ' LIMIT ? OFFSET ?';
+      params.push(limitNum, offset);
+      
+      const [countResult] = await db.query(countQuery, countParams);
+      paginationData = {
+        page: pageNum,
+        limit: limitNum,
+        total: countResult[0].total,
+        totalPages: Math.ceil(countResult[0].total / limitNum)
+      };
+    }
+
+    const [categories] = await db.query(query, params);
+
     res.json({
       success: true,
       data: categories,
-      message: 'Categories retrieved successfully'
+      message: 'Categories retrieved successfully',
+      pagination: paginationData
     });
   } catch (error) {
     console.error(error);

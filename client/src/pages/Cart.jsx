@@ -1,3 +1,4 @@
+import { formatCurrency } from '../utils/formatters';
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Minus, Plus, ShoppingBag } from 'lucide-react';
@@ -49,7 +50,7 @@ const Cart = () => {
                     <Link to={`/products/${item.product.id}`} className="text-xl font-bold text-gray-900 hover:text-primary transition-colors">
                       {item.product.name}
                     </Link>
-                    <div className="text-primary font-bold mt-1">${price.toFixed(2)}</div>
+                    <div className="text-primary font-bold mt-1">{formatCurrency(price)}</div>
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -69,7 +70,7 @@ const Cart = () => {
                       </button>
                     </div>
                     <div className="w-20 text-right font-bold text-gray-900">
-                      ${(price * item.quantity).toFixed(2)}
+                      {formatCurrency(price * item.quantity)}
                     </div>
                     <button 
                       onClick={() => removeFromCart(item.product.id)}
@@ -91,7 +92,7 @@ const Cart = () => {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-gray-900">${getCartTotal().toFixed(2)}</span>
+                  <span className="font-semibold text-gray-900">{formatCurrency(getCartTotal())}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
@@ -102,7 +103,7 @@ const Cart = () => {
               <div className="border-t border-gray-100 pt-6 mb-8">
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total</span>
-                  <span className="text-3xl font-extrabold text-primary">${getCartTotal().toFixed(2)}</span>
+                  <span className="text-3xl font-extrabold text-primary">{formatCurrency(getCartTotal())}</span>
                 </div>
               </div>
 

@@ -82,8 +82,26 @@ const sendOrderStatusUpdate = async (email, orderId, status) => {
   return sendEmail(email, `Order Update #${orderId}`, html);
 };
 
+const sendPasswordResetCode = async (email, code) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+      <h2 style="color: #4f46e5; text-align: center;">Reset Your Password</h2>
+      <p>You recently requested to reset your password for your E-Commerce Admin account. Use the code below to reset it. <strong>This password reset code is only valid for the next 15 minutes.</strong></p>
+      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b;">${code}</span>
+      </div>
+      <p>If you did not request a password reset, please ignore this email or contact support if you have questions.</p>
+      <p style="margin-top: 30px; font-size: 12px; color: #64748b; text-align: center;">
+        &copy; ${new Date().getFullYear()} E-Commerce Admin. All rights reserved.
+      </p>
+    </div>
+  `;
+  return sendEmail(email, 'Password Reset Code', html);
+};
+
 module.exports = {
   sendEmail,
   sendOrderConfirmation,
-  sendOrderStatusUpdate
+  sendOrderStatusUpdate,
+  sendPasswordResetCode
 };

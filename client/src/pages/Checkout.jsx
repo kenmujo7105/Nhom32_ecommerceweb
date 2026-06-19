@@ -1,3 +1,4 @@
+import { formatCurrency } from '../utils/formatters';
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CreditCard, Banknote } from 'lucide-react';
@@ -176,7 +177,7 @@ const Checkout = () => {
                 disabled={submitting}
                 className="w-full flex justify-center items-center bg-primary hover:bg-primary-dark text-white font-bold py-4 rounded-full text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-8"
               >
-                {submitting ? <Loader2 className="animate-spin" size={24} /> : `Pay $${getCartTotal().toFixed(2)}`}
+                {submitting ? <Loader2 className="animate-spin" size={24} /> : `Pay ${formatCurrency(getCartTotal())}`}
               </button>
             </form>
           </div>
@@ -197,7 +198,7 @@ const Checkout = () => {
                           <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                         </div>
                       </div>
-                      <div className="font-bold text-gray-900">${(price * item.quantity).toFixed(2)}</div>
+                      <div className="font-bold text-gray-900">{formatCurrency((price * item.quantity))}</div>
                     </div>
                   )
                 })}
@@ -205,7 +206,7 @@ const Checkout = () => {
               <div className="border-t border-gray-100 pt-6">
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-bold text-gray-900">Total</span>
-                  <span className="font-extrabold text-primary">${getCartTotal().toFixed(2)}</span>
+                  <span className="font-extrabold text-primary">{formatCurrency(getCartTotal())}</span>
                 </div>
               </div>
             </div>

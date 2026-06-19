@@ -23,6 +23,7 @@ import Products from './pages/admin/Products';
 import Categories from './pages/admin/Categories';
 import Orders from './pages/admin/Orders';
 import Users from './pages/admin/Users';
+import Admins from './pages/admin/Admins';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
               <Route path="categories" element={<Categories />} />
               <Route path="orders" element={<Orders />} />
               <Route path="users" element={<Users />} />
+              <Route path="admins" element={<Admins />} />
             </Route>
 
             {/* Main App Routes with MainLayout */}

@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../utils/formatters';
 import React, { useState, useEffect } from 'react';
 import { DollarSign, ShoppingCart, Package, TrendingUp, Users } from 'lucide-react';
 import api from '../../api/axios';
@@ -11,29 +12,12 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fallback mock data in case API is not yet implemented
-        const mockData = {
-          revenue: { today: 1250.50, week: 8400.00, month: 34500.25 },
-          ordersByStatus: { pending: 12, processing: 5, shipped: 24, delivered: 140 },
-          recentOrders: [
-            { id: '#ORD-001', customer: 'Alice Smith', total: 120.50, status: 'completed', date: '2026-06-17' },
-            { id: '#ORD-002', customer: 'Bob Johnson', total: 45.00, status: 'pending', date: '2026-06-17' },
-            { id: '#ORD-003', customer: 'Charlie Brown', total: 340.00, status: 'processing', date: '2026-06-16' },
-            { id: '#ORD-004', customer: 'Diana Prince', total: 89.99, status: 'shipped', date: '2026-06-15' },
-          ]
-        };
-
-        try {
-          const res = await api.get('/admin/stats');
-          if (res.data.success) {
-            setStats(res.data.data);
-          } else {
-            setStats(mockData);
-          }
-        } catch (err) {
-          console.error("Failed to fetch stats, using mock data", err);
-          setStats(mockData);
+        const res = await api.get('/admin/stats');
+        if (res.data.success) {
+          setStats(res.data.data);
         }
+      } catch (err) {
+        console.error("Failed to fetch stats", err);
       } finally {
         setLoading(false);
       }
@@ -54,7 +38,7 @@ const Dashboard = () => {
     { header: 'Order ID', field: 'id', className: 'font-medium text-slate-900' },
     { header: 'Customer', field: 'customer' },
     { header: 'Date', field: 'date' },
-    { header: 'Total', render: (row) => <span className="font-medium">${row.total.toFixed(2)}</span> },
+    { header: 'Total', render: (row) => <span className="font-medium">{formatCurrency(row.total)}</span> },
     { header: 'Status', render: (row) => <StatusBadge status={row.status} /> }
   ];
 
@@ -64,34 +48,35 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
           title="Revenue (Today)" 
-          value={`$${stats?.revenue?.today?.toLocaleString()}`} 
+          value={formatCurrency(stats?.revenue?.today || 0)} 
           icon={<DollarSign size={24} />} 
-          trend="+12.5%" 
-          trendUp={true} 
-        />
-        <StatCard 
-          title="Revenue (This Week)" 
-          value={`$${stats?.revenue?.week?.toLocaleString()}`} 
-          icon={<TrendingUp size={24} />} 
-          trend="+5.2%" 
+          trend="" 
           trendUp={true} 
         />
         <StatCard 
           title="Revenue (This Month)" 
-          value={`$${stats?.revenue?.month?.toLocaleString()}`} 
-          icon={<DollarSign size={24} />} 
-          trend="-2.1%" 
-          trendUp={false} 
+          value={formatCurrency(stats?.revenue?.month || 0)} 
+          icon={<TrendingUp size={24} />} 
+          trend="" 
+          trendUp={true} 
+        />
+        <StatCard 
+          title="Total Products" 
+          value={stats?.inventory?.totalProducts || 0} 
+          icon={<Package size={24} />} 
+          trend="" 
+          trendUp={true} 
         />
       </div>
 
       {/* Order Status Cards */}
       <h2 className="text-lg font-semibold text-slate-800 pt-4">Orders by Status</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <SmallCard title="Pending" value={stats?.ordersByStatus?.pending || 0} color="amber" />
         <SmallCard title="Processing" value={stats?.ordersByStatus?.processing || 0} color="blue" />
-        <SmallCard title="Shipped" value={stats?.ordersByStatus?.shipped || 0} color="indigo" />
-        <SmallCard title="Delivered" value={stats?.ordersByStatus?.delivered || 0} color="emerald" />
+        <SmallCard title="Completed" value={stats?.ordersByStatus?.completed || 0} color="emerald" />
+        <SmallCard title="Cancelled" value={stats?.ordersByStatus?.cancelled || 0} color="slate" />
+        <SmallCard title="Low Stock" value={stats?.inventory?.lowStock || 0} color="rose" />
       </div>
 
       {/* Recent Orders Table */}
@@ -135,6 +120,8 @@ const SmallCard = ({ title, value, color }) => {
     blue: 'bg-blue-50 text-blue-600 border-blue-200',
     indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    rose: 'bg-rose-50 text-rose-600 border-rose-200',
+    slate: 'bg-slate-50 text-slate-600 border-slate-200',
   };
   
   return (

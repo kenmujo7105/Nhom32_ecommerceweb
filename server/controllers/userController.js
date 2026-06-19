@@ -1,5 +1,6 @@
 const db = require('../db');
 const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
 
 // GET /api/admin/users
 exports.getUsers = async (req, res) => {
@@ -8,7 +9,7 @@ exports.getUsers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     
-    const { search, role } = req.query;
+    const { search, role, is_active, sort_by, sort_order } = req.query;
 
     let query = 'SELECT id, name, email, phone, address, role, is_active, created_at FROM users WHERE 1=1';
     let countQuery = 'SELECT COUNT(*) as total FROM users WHERE 1=1';
@@ -29,7 +30,21 @@ exports.getUsers = async (req, res) => {
       countParams.push(role);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    if (is_active !== undefined && is_active !== '') {
+      query += ' AND is_active = ?';
+      countQuery += ' AND is_active = ?';
+      const activeValue = is_active === 'true' || is_active === '1' ? 1 : 0;
+      params.push(activeValue);
+      countParams.push(activeValue);
+    }
+
+    const validSortColumns = ['name', 'created_at'];
+    const validSortOrders = ['ASC', 'DESC'];
+    
+    const sortColumn = validSortColumns.includes(sort_by) ? sort_by : 'created_at';
+    const sortDir = validSortOrders.includes(sort_order?.toUpperCase()) ? sort_order.toUpperCase() : 'DESC';
+
+    query += ` ORDER BY ${sortColumn} ${sortDir} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const [users] = await db.query(query, params);
@@ -140,4 +155,87 @@ exports.getRoles = (req, res) => {
     data: ['customer', 'admin'],
     message: 'Roles retrieved successfully'
   });
+};
+
+// POST /api/admin/admins
+exports.createAdmin = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, message: 'Validation error', data: errors.array() });
+  }
+
+  const { name, email, password, is_active } = req.body;
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+    const active = is_active !== undefined ? is_active : 1;
+
+    const [result] = await db.query(
+      'INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)',
+      [name, email, password_hash, 'admin', active]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin created successfully',
+      data: { id: result.insertId, name, email, role: 'admin', is_active: active }
+    });
+  } catch (error) {
+    console.error(error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Email already exists', data: null });
+    }
+    res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
+};
+
+// PUT /api/admin/admins/:id
+exports.updateAdmin = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, message: 'Validation error', data: errors.array() });
+  }
+
+  const { id } = req.params;
+  const { name, email, password, is_active } = req.body;
+
+  try {
+    const updates = [];
+    const params = [];
+
+    if (name) { updates.push('name = ?'); params.push(name); }
+    if (email) { updates.push('email = ?'); params.push(email); }
+    if (is_active !== undefined) { updates.push('is_active = ?'); params.push(is_active); }
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const password_hash = await bcrypt.hash(password, salt);
+      updates.push('password_hash = ?');
+      params.push(password_hash);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid fields to update', data: null });
+    }
+
+    // Prevent demoting last admin or similar could be done here, but we just update
+    params.push(id);
+    const [result] = await db.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ? AND role = 'admin'`, params);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Admin not found', data: null });
+    }
+
+    res.json({
+      success: true,
+      message: 'Admin updated successfully',
+      data: { id, name, email, is_active }
+    });
+  } catch (error) {
+    console.error(error);
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ success: false, message: 'Email already exists', data: null });
+    }
+    res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
 };

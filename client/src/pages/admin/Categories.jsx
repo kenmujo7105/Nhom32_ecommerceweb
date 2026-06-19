@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import api from '../../api/axios';
 import DataTable from '../../components/admin/DataTable';
 import Modal from '../../components/admin/Modal';
@@ -9,10 +9,17 @@ const Categories = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Table state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
+  
   // Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState({ id: null, name: '', description: '' });
+  const [formData, setFormData] = useState({ id: null, name: '' });
 
   // Delete state
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -20,14 +27,17 @@ const Categories = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [page, search, sortField, sortOrder]);
 
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/categories');
+      const res = await api.get('/categories', {
+        params: { page, search, sort_by: sortField, sort_order: sortOrder, limit: 10 }
+      });
       if (res.data && res.data.data) {
         setCategories(res.data.data);
+        setTotalPages(Math.ceil((res.data.pagination?.total || 0) / (res.data.pagination?.limit || 10)) || 1);
       } else if (Array.isArray(res.data)) {
         setCategories(res.data);
       }
@@ -43,12 +53,11 @@ const Categories = () => {
       setIsEditMode(true);
       setFormData({ 
         id: category._id || category.id, 
-        name: category.name, 
-        description: category.description || ''
+        name: category.name
       });
     } else {
       setIsEditMode(false);
-      setFormData({ id: null, name: '', description: '' });
+      setFormData({ id: null, name: '' });
     }
     setIsModalOpen(true);
   };
@@ -86,8 +95,18 @@ const Categories = () => {
   };
 
   const columns = [
-    { header: 'Category Name', field: 'name', className: 'font-medium text-slate-900' },
-    { header: 'Description', field: 'description', className: 'text-slate-500' },
+    { header: 'Category Name', field: 'name', sortable: true, className: 'font-medium text-slate-900' },
+    { 
+      header: 'Tổng tồn kho', 
+      field: 'total_stock', 
+      sortable: true,
+      className: 'text-slate-500',
+      render: (row) => (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+          {row.total_stock || 0}
+        </span>
+      )
+    },
     { 
       header: 'Actions', 
       className: 'text-right',
@@ -115,14 +134,29 @@ const Categories = () => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-800">Categories</h2>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          <Plus size={18} /> Add Category
-        </button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+        <h2 className="text-lg font-semibold text-slate-800 hidden md:block">Categories</h2>
+        
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search categories..." 
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-64 text-sm outline-none"
+            />
+          </div>
+          
+          <button 
+            onClick={() => handleOpenModal()}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
+          >
+            <Plus size={18} /> Add Category
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -130,6 +164,12 @@ const Categories = () => {
         columns={columns} 
         data={categories} 
         loading={loading} 
+        page={page} 
+        totalPages={totalPages} 
+        onPageChange={setPage} 
+        onSort={(field, order) => { setSortField(field); setSortOrder(order); setPage(1); }}
+        sortField={sortField}
+        sortOrder={sortOrder}
         keyField="_id"
       />
 
@@ -149,16 +189,6 @@ const Categories = () => {
               onChange={e => setFormData({...formData, name: e.target.value})}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-            <textarea 
-              rows="3"
-              value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-            ></textarea>
           </div>
 
           <div className="pt-4 flex justify-end gap-3">

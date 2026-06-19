@@ -2,6 +2,7 @@ const db = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
+const emailService = require('../services/emailService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -164,5 +165,59 @@ exports.updateProfile = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
+};
+
+// POST /api/auth/forgot-password
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+
+  try {
+    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 15 * 60000); // 15 mins
+
+    await db.query('UPDATE users SET reset_code = ?, reset_code_expiry = ? WHERE id = ?', [resetCode, expiry, users[0].id]);
+    await emailService.sendPasswordResetCode(email, resetCode);
+
+    res.json({ success: true, message: 'Reset code sent to email' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// POST /api/auth/reset-password
+exports.resetPassword = async (req, res) => {
+  const { email, code, new_password } = req.body;
+  if (!email || !code || !new_password) return res.status(400).json({ success: false, message: 'Missing fields' });
+
+  try {
+    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    if (users.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const user = users[0];
+    if (!user.reset_code || user.reset_code !== code) {
+      return res.status(400).json({ success: false, message: 'Invalid reset code' });
+    }
+
+    if (new Date(user.reset_code_expiry) < new Date()) {
+      return res.status(400).json({ success: false, message: 'Reset code expired' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(new_password, salt);
+
+    await db.query('UPDATE users SET password_hash = ?, reset_code = NULL, reset_code_expiry = NULL WHERE id = ?', [password_hash, user.id]);
+
+    res.json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

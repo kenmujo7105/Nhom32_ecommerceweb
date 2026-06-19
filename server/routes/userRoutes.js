@@ -17,4 +17,15 @@ router.get('/admin/users/:id', verifyToken, isAdmin, userController.getUserById)
 router.patch('/admin/users/:id', verifyToken, isAdmin, updateUserValidation, userController.updateUser);
 router.delete('/admin/users/:id', verifyToken, isAdmin, userController.deleteUser);
 
+// Specialized Admin Management Routes
+router.post('/admin/admins', verifyToken, isAdmin, [
+  body('name').notEmpty().withMessage('Name is required'),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], userController.createAdmin);
+router.put('/admin/admins/:id', verifyToken, isAdmin, [
+  body('email').optional().isEmail().withMessage('Valid email is required'),
+  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], userController.updateAdmin);
+
 module.exports = router;

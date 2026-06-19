@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import ForgotPasswordModal from '../components/ForgotPasswordModal';
 
 const Login = () => {
   const { login } = useContext(AuthContext);
@@ -11,6 +12,7 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -22,8 +24,13 @@ const Login = () => {
     try {
       const res = await api.post('/auth/login', formData);
       if (res.data.success) {
-        login(res.data.data.token, res.data.data.user);
-        navigate('/profile');
+        const loggedUser = res.data.data.user;
+        login(res.data.data.token, loggedUser);
+        if (loggedUser.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/profile');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -61,7 +68,16 @@ const Login = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-semibold text-gray-700">Password</label>
+              <button 
+                type="button" 
+                onClick={() => setIsForgotModalOpen(true)}
+                className="text-sm font-semibold text-primary hover:text-primary-dark hover:underline transition-colors"
+              >
+                Quên mật khẩu?
+              </button>
+            </div>
             <input 
               required
               type="password" 
@@ -86,6 +102,11 @@ const Login = () => {
           Don't have an account? <Link to="/register" className="text-primary font-bold hover:underline">Create one</Link>
         </div>
       </div>
+
+      <ForgotPasswordModal 
+        isOpen={isForgotModalOpen} 
+        onClose={() => setIsForgotModalOpen(false)} 
+      />
     </div>
   );
 };

@@ -4,7 +4,25 @@ async function runMigration() {
   try {
     const connection = await db.getConnection();
     
-    console.log('Running migration: Adding fields to orders table...');
+    console.log('Running migration: Adding fields to tables...');
+    
+    // Add gallery_images to products
+    try {
+      await connection.query("ALTER TABLE products ADD COLUMN gallery_images JSON DEFAULT NULL;");
+      console.log('Added gallery_images to products');
+    } catch (e) { console.log('gallery_images likely exists', e.message); }
+    
+    // Add reset_code to users
+    try {
+      await connection.query("ALTER TABLE users ADD COLUMN reset_code VARCHAR(10) NULL;");
+      console.log('Added reset_code');
+    } catch (e) { console.log('reset_code likely exists', e.message); }
+
+    // Add reset_code_expiry to users
+    try {
+      await connection.query("ALTER TABLE users ADD COLUMN reset_code_expiry DATETIME NULL;");
+      console.log('Added reset_code_expiry');
+    } catch (e) { console.log('reset_code_expiry likely exists', e.message); }
     
     // Add customer_email
     try {

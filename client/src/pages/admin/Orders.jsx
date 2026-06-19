@@ -1,3 +1,4 @@
+import { formatCurrency } from '../../utils/formatters';
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Eye, ChevronDown } from 'lucide-react';
 import api from '../../api/axios';
@@ -14,6 +15,8 @@ const Orders = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sortField, setSortField] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,18 +24,18 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, sortField, sortOrder]);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       // Pass params for pagination/search/filter
       const res = await api.get('/orders', { 
-        params: { page, search, status: statusFilter, limit: 10 } 
+        params: { page, search, status: statusFilter, sort_by: sortField, sort_order: sortOrder, limit: 10 } 
       });
       if (res.data && res.data.data) {
         setOrders(res.data.data);
-        setTotalPages(res.data.pagination?.totalPages || 1);
+        setTotalPages(Math.ceil((res.data.pagination?.total || 0) / (res.data.pagination?.limit || 10)) || 1);
       } else if (Array.isArray(res.data)) {
         let filtered = [...res.data];
         if (search) {
@@ -93,10 +96,12 @@ const Orders = () => {
         </div>
       ) 
     },
-    { header: 'Date', render: (row) => <span className="text-slate-600">{new Date(row.createdAt || row.date || Date.now()).toLocaleDateString()}</span> },
-    { header: 'Total', render: (row) => <span className="font-medium">${Number(row.total || row.totalAmount || 0).toFixed(2)}</span> },
+    { header: 'Date', field: 'created_at', sortable: true, render: (row) => <span className="text-slate-600">{new Date(row.createdAt || row.date || Date.now()).toLocaleDateString()}</span> },
+    { header: 'Total', field: 'total_price', sortable: true, render: (row) => <span className="font-medium">{formatCurrency(Number(row.total || row.totalAmount || 0))}</span> },
     { 
       header: 'Status', 
+      field: 'status',
+      sortable: true,
       render: (row) => (
         <div className="relative inline-block group">
           <select 
@@ -171,6 +176,9 @@ const Orders = () => {
         page={page} 
         totalPages={totalPages} 
         onPageChange={setPage} 
+        onSort={(field, order) => { setSortField(field); setSortOrder(order); setPage(1); }}
+        sortField={sortField}
+        sortOrder={sortOrder}
         keyField="_id"
       />
 
@@ -224,13 +232,13 @@ const Orders = () => {
                           <div className="text-xs text-slate-500">Qty: {item.quantity}</div>
                         </div>
                       </div>
-                      <span className="font-medium text-slate-800">${Number(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-medium text-slate-800">{formatCurrency(Number(item.price * item.quantity))}</span>
                     </li>
                   ))}
                 </ul>
                 <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center text-sm font-bold">
                   <span>Total Amount</span>
-                  <span className="text-indigo-600 text-lg">${Number(selectedOrder.total || selectedOrder.totalAmount || 0).toFixed(2)}</span>
+                  <span className="text-indigo-600 text-lg">{formatCurrency(Number(selectedOrder.total || selectedOrder.totalAmount || 0))}</span>
                 </div>
               </div>
             </div>
