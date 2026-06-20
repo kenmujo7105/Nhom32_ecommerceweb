@@ -292,7 +292,7 @@ exports.getUserPurchasedProducts = async (req, res) => {
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       JOIN products p ON p.id = oi.product_id
-      WHERE o.user_id = ? AND o.status NOT IN ('cancelled')
+      WHERE o.user_id = ? AND o.status = 'completed'
       GROUP BY p.id, p.name, p.image_url, oi.price_at_purchase
       ORDER BY last_purchased DESC
     `;
