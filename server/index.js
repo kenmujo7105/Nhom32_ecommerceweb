@@ -27,6 +27,8 @@ app.use('/api', userRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', chatRoutes);
+const reviewRoutes = require('./routes/reviewRoutes');
+app.use('/api', reviewRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {

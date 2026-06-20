@@ -42,6 +42,7 @@ services:
       - VNP_RETURNURL=${VNP_RETURNURL}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - TZ=Asia/Ho_Chi_Minh
 
     depends_on:
@@ -51,7 +52,10 @@ services:
 
   client:
     image: ${CLIENT_IMAGE:-ecommerce_client:latest}
-    build: ./client
+    build: 
+      context: ./client
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     container_name: ecommerce_client
     restart: always
     ports:

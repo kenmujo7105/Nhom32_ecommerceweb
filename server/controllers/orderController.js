@@ -37,8 +37,10 @@ exports.createOrder = async (req, res) => {
         throw new Error(`Insufficient stock for product: ${product.name}`);
       }
 
-      // Decrement stock
-      await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [quantity, product_id]);
+      // Decrement stock ONLY if not VNPAY
+      if (payment_method !== 'vnpay') {
+        await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [quantity, product_id]);
+      }
 
       // Use sale_price if available, otherwise price
       const priceAtPurchase = product.sale_price ? parseFloat(product.sale_price) : parseFloat(product.price);
@@ -208,8 +210,8 @@ exports.updateOrderStatus = async (req, res) => {
 
     await connection.commit();
 
-    // If status is shipping or delivered, send email
-    if (['shipping', 'delivered'].includes(status) && currentOrder[0].customer_email) {
+    // If status is shipping, delivered or cancelled, send email
+    if (['shipping', 'delivered', 'cancelled'].includes(status) && currentOrder[0].customer_email) {
       emailService.sendOrderStatusUpdate(currentOrder[0].customer_email, id, status)
         .catch(err => console.error("Failed to send status update email", err));
     }
@@ -254,7 +256,7 @@ exports.cancelMyOrder = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const [orders] = await connection.query('SELECT status FROM orders WHERE id = ? AND user_id = ?', [id, user_id]);
+    const [orders] = await connection.query('SELECT status, customer_email FROM orders WHERE id = ? AND user_id = ?', [id, user_id]);
     if (orders.length === 0) {
       throw new Error('Order not found or unauthorized');
     }
@@ -273,6 +275,12 @@ exports.cancelMyOrder = async (req, res) => {
     await connection.query('UPDATE orders SET status = ? WHERE id = ?', ['cancelled', id]);
 
     await connection.commit();
+
+    // Send cancellation email
+    if (orders[0].customer_email) {
+      emailService.sendOrderStatusUpdate(orders[0].customer_email, id, 'cancelled')
+        .catch(err => console.error("Failed to send cancellation email", err));
+    }
 
     res.json({
       success: true,

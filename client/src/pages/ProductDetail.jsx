@@ -1,37 +1,55 @@
 import { formatCurrency } from '../utils/formatters';
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import api from '../api/axios';
 import { CartContext } from '../context/CartContext';
+import { AuthContext } from '../context/AuthContext';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useContext(CartContext);
+  const { user } = useContext(AuthContext);
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [mainImage, setMainImage] = useState(null);
+  
+  // Review state
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewSuccess, setReviewSuccess] = useState('');
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndReviews = async () => {
       try {
-        const res = await api.get(`/products/${id}`);
-        if (res.data.success) {
-          setProduct(res.data.data);
-          const imgUrl = res.data.data.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80';
+        const [productRes, reviewsRes] = await Promise.all([
+          api.get(`/products/${id}`),
+          api.get(`/products/${id}/reviews`)
+        ]);
+
+        if (productRes.data.success) {
+          setProduct(productRes.data.data);
+          const imgUrl = productRes.data.data.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80';
           setMainImage(imgUrl);
         }
+        
+        if (reviewsRes.data.success) {
+          setReviews(reviewsRes.data.data);
+        }
       } catch (error) {
-        console.error("Failed to fetch product", error);
+        console.error("Failed to fetch product data", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchProduct();
+    fetchProductAndReviews();
   }, [id]);
 
   if (loading) {
@@ -80,6 +98,45 @@ const ProductDetail = () => {
     setAdding(true);
     addToCart(product, quantity);
     setTimeout(() => setAdding(false), 500);
+  };
+
+  const submitReview = async (e) => {
+    e.preventDefault();
+    setSubmittingReview(true);
+    setReviewError('');
+    setReviewSuccess('');
+    
+    try {
+      const res = await api.post(`/products/${id}/reviews`, {
+        rating: reviewRating,
+        comment: reviewText
+      });
+      
+      if (res.data.success) {
+        setReviewSuccess('Review submitted successfully!');
+        setReviewText('');
+        setReviewRating(5);
+        // Refresh reviews
+        const reviewsRes = await api.get(`/products/${id}/reviews`);
+        if (reviewsRes.data.success) {
+          setReviews(reviewsRes.data.data);
+        }
+      }
+    } catch (err) {
+      setReviewError(err.response?.data?.message || 'Failed to submit review. Ensure you have purchased this product.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const renderStars = (rating) => {
+    return Array(5).fill(0).map((_, i) => (
+      <Star 
+        key={i} 
+        size={18} 
+        className={`${i < Math.floor(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} inline-block mr-1`} 
+      />
+    ));
   };
 
   return (
@@ -138,7 +195,18 @@ const ProductDetail = () => {
 
           {/* Product Info */}
           <div className="flex flex-col">
-            <h1 className="text-4xl font-extrabold text-gray-900 mb-4">{product.name}</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{product.name}</h1>
+            
+            {/* Rating summary */}
+            <div className="flex items-center gap-2 mb-6 text-gray-600">
+              <div className="flex">
+                {renderStars(product.rating || 0)}
+              </div>
+              <span className="text-sm font-medium">
+                {product.rating ? parseFloat(product.rating).toFixed(1) : 'No ratings yet'} 
+                {product.reviews_count > 0 && ` (${product.reviews_count} reviews)`}
+              </span>
+            </div>
             
             <div className="flex items-center gap-4 mb-6">
               {salePrice ? (
@@ -240,6 +308,113 @@ const ProductDetail = () => {
                     <span className="font-medium text-gray-900">2-4 Business Days</span>
                   </li>
                 </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-20">
+          <div className="border-b border-gray-200 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 pb-4 inline-block border-b-2 border-primary">
+              Customer Reviews
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-12">
+            {/* Review List */}
+            <div className="md:col-span-2 flex flex-col gap-6">
+              {reviews.length === 0 ? (
+                <div className="bg-gray-50 rounded-2xl p-8 text-center text-gray-500 border border-gray-100">
+                  <p className="mb-2">No reviews yet.</p>
+                  <p className="text-sm">Be the first to review this product!</p>
+                </div>
+              ) : (
+                reviews.map(review => (
+                  <div key={review.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <span className="font-bold text-gray-900">{review.user_name}</span>
+                        <div className="mt-1">{renderStars(review.rating)}</div>
+                      </div>
+                      <span className="text-sm text-gray-400">
+                        {new Date(review.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">{review.comment}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            {/* Review Form */}
+            <div>
+              <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 sticky top-24">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Write a Review</h3>
+                
+                {!user ? (
+                  <div className="text-center p-6 bg-white rounded-xl border border-gray-200">
+                    <p className="text-gray-600 mb-4">Please log in to write a review.</p>
+                    <button 
+                      onClick={() => navigate('/login')}
+                      className="w-full bg-primary hover:bg-primary-dark text-white font-medium py-2 rounded-lg transition-colors"
+                    >
+                      Log In
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={submitReview} className="flex flex-col gap-4">
+                    {reviewSuccess && (
+                      <div className="bg-green-100 text-green-700 p-3 rounded-lg text-sm mb-2 border border-green-200">
+                        {reviewSuccess}
+                      </div>
+                    )}
+                    {reviewError && (
+                      <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm mb-2 border border-red-200">
+                        {reviewError}
+                      </div>
+                    )}
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setReviewRating(star)}
+                            className="focus:outline-none"
+                          >
+                            <Star 
+                              size={28} 
+                              className={`${star <= reviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} hover:scale-110 transition-transform`} 
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Review</label>
+                      <textarea
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        required
+                        rows={4}
+                        placeholder="What did you like or dislike? What did you use this product for?"
+                        className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="mt-2 w-full bg-gray-900 hover:bg-black text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submittingReview ? 'Submitting...' : 'Submit Review'}
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           </div>

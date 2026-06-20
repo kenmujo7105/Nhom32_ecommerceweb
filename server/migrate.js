@@ -48,6 +48,35 @@ async function runMigration() {
       console.log('Added stripe_session_id');
     } catch (e) { console.log('stripe_session_id likely exists', e.message); }
 
+    // Add rating to products
+    try {
+      await connection.query("ALTER TABLE products ADD COLUMN rating DECIMAL(3, 2) DEFAULT 0;");
+      console.log('Added rating to products');
+    } catch (e) { console.log('rating likely exists', e.message); }
+
+    // Add reviews_count to products
+    try {
+      await connection.query("ALTER TABLE products ADD COLUMN reviews_count INT DEFAULT 0;");
+      console.log('Added reviews_count to products');
+    } catch (e) { console.log('reviews_count likely exists', e.message); }
+
+    // Create reviews table
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS reviews (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          product_id INT NOT NULL,
+          user_id INT NOT NULL,
+          rating INT NOT NULL CHECK(rating >= 1 AND rating <= 5),
+          comment TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+      console.log('Created reviews table');
+    } catch (e) { console.log('Error creating reviews table:', e.message); }
+
     console.log('Migration completed successfully.');
     connection.release();
     process.exit(0);
