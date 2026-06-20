@@ -1,6 +1,6 @@
 import { formatCurrency } from '../../utils/formatters';
 import React, { useState, useEffect } from 'react';
-import { DollarSign, ShoppingCart, Package, TrendingUp, Users } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, Calendar, CalendarDays } from 'lucide-react';
 import api from '../../api/axios';
 import DataTable from '../../components/admin/DataTable';
 import StatusBadge from '../../components/admin/StatusBadge';
@@ -8,11 +8,13 @@ import StatusBadge from '../../components/admin/StatusBadge';
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     const fetchStats = async () => {
+      setLoading(true);
       try {
-        const res = await api.get('/admin/stats');
+        const res = await api.get(`/admin/stats?month=${selectedMonth}`);
         if (res.data.success) {
           setStats(res.data.data);
         }
@@ -24,7 +26,7 @@ const Dashboard = () => {
     };
 
     fetchStats();
-  }, []);
+  }, [selectedMonth]);
 
   if (loading) {
     return (
@@ -42,22 +44,47 @@ const Dashboard = () => {
     { header: 'Status', render: (row) => <StatusBadge status={row.status} /> }
   ];
 
+  const weeklyColumns = [
+    { header: 'Week', field: 'week', className: 'font-medium text-slate-900' },
+    { header: 'Revenue', render: (row) => <span className="font-medium text-emerald-600">{formatCurrency(row.total)}</span> }
+  ];
+
+  const dailyColumns = [
+    { header: 'Date', field: 'date', className: 'font-medium text-slate-900' },
+    { header: 'Revenue', render: (row) => <span className="font-medium text-emerald-600">{formatCurrency(row.total)}</span> }
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Header and Filter */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-md border border-slate-300">
+        <h2 className="text-xl font-bold text-slate-800">Dashboard Overview</h2>
+        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+          <Calendar size={18} className="text-indigo-600" />
+          <span className="text-sm font-medium text-slate-700">Select Month:</span>
+          <input 
+            type="month" 
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-transparent border-none outline-none text-sm font-bold text-indigo-700 cursor-pointer"
+          />
+        </div>
+      </div>
+
       {/* Revenue Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
-          title="Revenue (Today)" 
-          value={formatCurrency(stats?.revenue?.today || 0)} 
-          icon={<DollarSign size={24} />} 
-          trend="" 
+          title="Revenue (Selected Month)" 
+          value={formatCurrency(stats?.revenue?.month || 0)} 
+          icon={<TrendingUp size={24} />} 
+          trend="Total" 
           trendUp={true} 
         />
         <StatCard 
-          title="Revenue (This Month)" 
-          value={formatCurrency(stats?.revenue?.month || 0)} 
-          icon={<TrendingUp size={24} />} 
-          trend="" 
+          title="Average Daily Revenue" 
+          value={formatCurrency(stats?.revenue?.averageDaily || 0)} 
+          icon={<DollarSign size={24} />} 
+          trend="Per Day" 
           trendUp={true} 
         />
         <StatCard 
@@ -79,8 +106,35 @@ const Dashboard = () => {
         <SmallCard title="Low Stock" value={stats?.inventory?.lowStock || 0} color="rose" />
       </div>
 
+      {/* New Revenue Breakdowns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="text-indigo-600" size={20} />
+            <h2 className="text-lg font-semibold text-slate-800">Weekly Revenue Breakdown</h2>
+          </div>
+          <DataTable 
+            columns={weeklyColumns} 
+            data={stats?.revenue?.weeklyRevenues || []} 
+            keyField="week" 
+          />
+        </div>
+        
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="text-indigo-600" size={20} />
+            <h2 className="text-lg font-semibold text-slate-800">Daily Revenue Breakdown</h2>
+          </div>
+          <DataTable 
+            columns={dailyColumns} 
+            data={stats?.revenue?.dailyRevenues || []} 
+            keyField="date" 
+          />
+        </div>
+      </div>
+
       {/* Recent Orders Table */}
-      <div className="pt-4">
+      <div className="pt-6 border-t border-slate-200">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-800">Recent Orders</h2>
         </div>

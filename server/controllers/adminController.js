@@ -2,19 +2,55 @@ const db = require('../db');
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const targetMonth = req.query.month || new Date().toISOString().slice(0, 7);
+    const [year, month] = targetMonth.split('-');
+    
+    const startDate = `${year}-${month}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${month}-${lastDay}`;
 
-    // 1. Revenue
-    const [todayRevenueResult] = await db.query(
-      "SELECT COALESCE(SUM(total_price), 0) as total FROM orders WHERE status NOT IN ('cancelled') AND DATE(created_at) = ?",
-      [todayStr]
-    );
+    // 1. Revenue (Selected Month)
     const [monthRevenueResult] = await db.query(
-      "SELECT COALESCE(SUM(total_price), 0) as total FROM orders WHERE status NOT IN ('cancelled') AND DATE(created_at) >= ?",
-      [firstDayOfMonth]
+      "SELECT COALESCE(SUM(total_price), 0) as total FROM orders WHERE status NOT IN ('cancelled') AND DATE(created_at) >= ? AND DATE(created_at) <= ?",
+      [startDate, endDate]
     );
+
+    // Daily Revenue Breakdown
+    const [dailyRevenueResult] = await db.query(
+      "SELECT DATE(created_at) as date, COALESCE(SUM(total_price), 0) as total FROM orders WHERE status NOT IN ('cancelled') AND DATE(created_at) >= ? AND DATE(created_at) <= ? GROUP BY DATE(created_at) ORDER BY date ASC",
+      [startDate, endDate]
+    );
+
+    const dailyRevenues = dailyRevenueResult.map(r => {
+      // Handle timezone offset if needed, simple slice of local ISO string
+      const d = new Date(r.date);
+      const tzOffset = d.getTimezoneOffset() * 60000; // offset in milliseconds
+      const localISOTime = (new Date(d - tzOffset)).toISOString().slice(0, -1);
+      return {
+        date: localISOTime.split('T')[0],
+        total: parseFloat(r.total)
+      };
+    });
+
+    // Weekly Revenue Logic (grouping daily by 7-day chunks)
+    const weeklyRevenues = [
+      { week: 'Week 1 (1-7)', total: 0 },
+      { week: 'Week 2 (8-14)', total: 0 },
+      { week: 'Week 3 (15-21)', total: 0 },
+      { week: 'Week 4 (22-28)', total: 0 },
+      { week: `Week 5 (29-${lastDay})`, total: 0 }
+    ];
+
+    dailyRevenues.forEach(r => {
+       const dayNum = parseInt(r.date.split('-')[2], 10);
+       let weekIndex = Math.floor((dayNum - 1) / 7);
+       if (weekIndex > 4) weekIndex = 4;
+       weeklyRevenues[weekIndex].total += r.total;
+    });
+
+    const validWeeklyRevenues = weeklyRevenues.filter((w, i) => i < 4 || lastDay > 28);
+    const totalMonthRevenue = parseFloat(monthRevenueResult[0].total);
+    const averageDaily = dailyRevenues.length > 0 ? (totalMonthRevenue / dailyRevenues.length) : 0;
 
     // 2. Orders by Status
     const [ordersStatusResult] = await db.query(
@@ -69,8 +105,11 @@ exports.getDashboardStats = async (req, res) => {
       success: true,
       data: {
         revenue: {
-          today: parseFloat(todayRevenueResult[0].total),
-          month: parseFloat(monthRevenueResult[0].total)
+          month: totalMonthRevenue,
+          averageDaily: averageDaily,
+          dailyRevenues: dailyRevenues,
+          weeklyRevenues: validWeeklyRevenues,
+          targetMonth: targetMonth
         },
         ordersByStatus,
         inventory: {
