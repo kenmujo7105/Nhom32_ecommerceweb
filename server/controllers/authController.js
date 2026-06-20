@@ -136,6 +136,57 @@ exports.login = async (req, res) => {
   }
 };
 
+// POST /api/auth/google
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+exports.googleLogin = async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    return res.status(400).json({ success: false, message: 'Missing credential' });
+  }
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, sub } = payload;
+
+    // Check if user exists
+    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    let user;
+
+    if (users.length > 0) {
+      user = users[0];
+      if (!user.is_active) {
+        return res.status(403).json({ success: false, message: 'Account is deactivated' });
+      }
+    } else {
+      // Create new user with random password
+      const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      const salt = await bcrypt.genSalt(10);
+      const password_hash = await bcrypt.hash(randomPassword, salt);
+
+      const [result] = await db.query(
+        'INSERT INTO users (name, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, ?)',
+        [name, email, password_hash, 'customer', true]
+      );
+      user = { id: result.insertId, name, email, role: 'customer' };
+    }
+
+    const token = generateToken(user);
+    res.json({
+      success: true,
+      message: 'Google Login successful',
+      data: { token, user: { id: user.id, name: user.name, email: user.email, role: user.role } }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(401).json({ success: false, message: 'Invalid Google Token' });
+  }
+};
 // POST /api/auth/change-password
 exports.changePassword = async (req, res) => {
   const errors = validationResult(req);

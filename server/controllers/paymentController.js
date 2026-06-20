@@ -105,7 +105,16 @@ exports.vnpayReturn = async (req, res) => {
          // Payment successful
          const order_id = vnp_Params['vnp_TxnRef'].split('_')[0];
          
-         await db.query("UPDATE orders SET payment_status = 'paid' WHERE id = ?", [order_id]);
+         // Check if already paid to prevent double deduction
+         const [orderCheck] = await db.query("SELECT payment_status FROM orders WHERE id = ?", [order_id]);
+         if (orderCheck.length > 0 && orderCheck[0].payment_status !== 'paid') {
+           // Deduct stock here since we didn't do it at order creation
+           const [items] = await db.query('SELECT product_id, quantity FROM order_items WHERE order_id = ?', [order_id]);
+           for (const item of items) {
+             await db.query('UPDATE products SET stock = stock - ? WHERE id = ?', [item.quantity, item.product_id]);
+           }
+           await db.query("UPDATE orders SET payment_status = 'paid' WHERE id = ?", [order_id]);
+         }
          
          res.json({success: true, message: 'Payment verified successfully'});
       } else {

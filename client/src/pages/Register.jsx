@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 
@@ -79,6 +80,27 @@ const Register = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setError('');
+      const res = await api.post('/auth/google', { credential: credentialResponse.credential });
+      if (res.data.success) {
+        const loggedUser = res.data.data.user;
+        login(res.data.data.token, loggedUser);
+        navigate('/profile');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google Login failed. Please try again.');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="max-w-md w-full bg-white p-10 rounded-3xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200">
@@ -148,6 +170,23 @@ const Register = () => {
 
             <div className="mt-8 text-center text-sm text-gray-600">
               Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Sign in</Link>
+            </div>
+
+            <div className="my-6 flex items-center justify-center space-x-2">
+              <div className="h-px w-full bg-gray-300"></div>
+              <span className="text-gray-500 text-sm">hoặc</span>
+              <div className="h-px w-full bg-gray-300"></div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                text="signup_with"
+                shape="pill"
+              />
             </div>
           </>
         )}
