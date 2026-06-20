@@ -11,7 +11,7 @@ const Cart = () => {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white p-12 rounded-3xl shadow-sm text-center max-w-md w-full">
+        <div className="bg-white p-12 rounded-3xl shadow-md text-center max-w-md w-full">
           <div className="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">
             <ShoppingBag size={48} />
           </div>
@@ -41,7 +41,7 @@ const Cart = () => {
               const imageUrl = item.product.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&q=80';
 
               return (
-                <div key={item.product.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center gap-6">
+                <div key={item.product.id} className="bg-white p-6 rounded-2xl shadow-md border-2 border-slate-300 shadow-md ring-1 ring-slate-200 flex flex-col sm:flex-row items-center gap-6">
                   <Link to={`/products/${item.product.id}`} className="shrink-0">
                     <img src={imageUrl} alt={item.product.name} className="w-24 h-24 object-cover rounded-xl" />
                   </Link>
@@ -54,7 +54,7 @@ const Cart = () => {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-gray-200 rounded-full bg-gray-50">
+                    <div className="flex items-center border-2 border-slate-300 shadow-md ring-1 ring-slate-200 rounded-full bg-gray-50">
                       <button 
                         onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                         className="p-2 text-gray-600 hover:text-primary transition-colors"
@@ -86,7 +86,7 @@ const Cart = () => {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
+            <div className="bg-white p-8 rounded-3xl shadow-md border-2 border-slate-300 shadow-md ring-1 ring-slate-200 sticky top-24">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
               
               <div className="space-y-4 mb-6">

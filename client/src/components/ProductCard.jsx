@@ -9,7 +9,7 @@ const ProductCard = ({ product }) => {
   const imageUrl = product.image_url || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'; // fallback placeholder
 
   return (
-    <Link to={`/products/${product.id}`} className="group block bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+    <Link to={`/products/${product.id}`} className="group block bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-slate-300 shadow-md ring-1 ring-slate-200">
       <div className="relative aspect-square overflow-hidden bg-gray-100">
         <img 
           src={imageUrl} 
@@ -17,7 +17,7 @@ const ProductCard = ({ product }) => {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         {salePrice && (
-          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+          <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
             SALE
           </div>
         )}

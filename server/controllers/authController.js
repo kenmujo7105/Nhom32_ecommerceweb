@@ -21,15 +21,66 @@ exports.register = async (req, res) => {
   const { name, email, password, phone, address } = req.body;
 
   try {
+    // Check if email already exists
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Email already exists', data: null });
+    }
+
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    const [result] = await db.query(
-      'INSERT INTO users (name, email, password_hash, phone, address, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, email, password_hash, phone || null, address || null, 'customer', true]
+    // Generate 6-digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code_hash = await bcrypt.hash(code, 10);
+
+    const registration_token = jwt.sign(
+      { name, email, password_hash, phone, address, code_hash },
+      JWT_SECRET,
+      { expiresIn: '15m' }
     );
 
-    const user = { id: result.insertId, name, email, role: 'customer' };
+    await emailService.sendRegistrationCode(email, code);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verification code sent to email',
+      data: { registration_token }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
+};
+
+// POST /api/auth/register-verify
+exports.verifyRegister = async (req, res) => {
+  const { registration_token, code } = req.body;
+  
+  if (!registration_token || !code) {
+    return res.status(400).json({ success: false, message: 'Missing registration token or verification code' });
+  }
+
+  try {
+    const decoded = jwt.verify(registration_token, JWT_SECRET);
+    const isMatch = await bcrypt.compare(code.toString(), decoded.code_hash);
+    
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+
+    // Double check email existence just in case
+    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [decoded.email]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Email already exists' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO users (name, email, password_hash, phone, address, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [decoded.name, decoded.email, decoded.password_hash, decoded.phone || null, decoded.address || null, 'customer', true]
+    );
+
+    const user = { id: result.insertId, name: decoded.name, email: decoded.email, role: 'customer' };
     const token = generateToken(user);
 
     res.status(201).json({
@@ -37,12 +88,13 @@ exports.register = async (req, res) => {
       message: 'User registered successfully',
       data: { token, user }
     });
+
   } catch (error) {
     console.error(error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ success: false, message: 'Email already exists', data: null });
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({ success: false, message: 'Verification code expired. Please try registering again.' });
     }
-    res.status(500).json({ success: false, message: 'Server error', data: null });
+    return res.status(400).json({ success: false, message: 'Invalid or expired token' });
   }
 };
 
@@ -95,7 +147,7 @@ exports.changePassword = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const [users] = await db.query('SELECT password_hash FROM users WHERE id = ?', [user_id]);
+    const [users] = await db.query('SELECT password_hash, email FROM users WHERE id = ?', [user_id]);
     if (users.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found', data: null });
     }
@@ -108,16 +160,64 @@ exports.changePassword = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const new_password_hash = await bcrypt.hash(new_password, salt);
 
-    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [new_password_hash, user_id]);
+    // Generate 6-digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code_hash = await bcrypt.hash(code, 10);
+
+    const change_password_token = jwt.sign(
+      { user_id, new_password_hash, code_hash },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    await emailService.sendPasswordChangeVerificationCode(users[0].email, code);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent to email',
+      data: { change_password_token }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
+};
+
+// POST /api/auth/change-password-verify
+exports.verifyChangePassword = async (req, res) => {
+  const { change_password_token, code } = req.body;
+  const user_id = req.user.id;
+  
+  if (!change_password_token || !code) {
+    return res.status(400).json({ success: false, message: 'Missing token or verification code' });
+  }
+
+  try {
+    const decoded = jwt.verify(change_password_token, JWT_SECRET);
+    
+    if (decoded.user_id !== user_id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized action' });
+    }
+
+    const isMatch = await bcrypt.compare(code.toString(), decoded.code_hash);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid verification code' });
+    }
+
+    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [decoded.new_password_hash, user_id]);
 
     res.json({
       success: true,
       message: 'Password changed successfully',
       data: null
     });
+
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Server error', data: null });
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({ success: false, message: 'Verification code expired. Please try changing password again.' });
+    }
+    return res.status(400).json({ success: false, message: 'Invalid or expired token' });
   }
 };
 

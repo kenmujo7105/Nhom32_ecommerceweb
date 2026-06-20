@@ -178,18 +178,40 @@ exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
+  const connection = await db.getConnection();
   try {
-    const [result] = await db.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: 'Order not found', data: null });
+    await connection.beginTransaction();
+
+    const [currentOrder] = await connection.query('SELECT status, customer_email FROM orders WHERE id = ? FOR UPDATE', [id]);
+    if (currentOrder.length === 0) {
+      throw new Error('Order not found');
     }
-    // If status is shipping or delivered, send email
-    if (['shipping', 'delivered'].includes(status)) {
-      const [orderRows] = await db.query('SELECT customer_email FROM orders WHERE id = ?', [id]);
-      if (orderRows.length > 0 && orderRows[0].customer_email) {
-        emailService.sendOrderStatusUpdate(orderRows[0].customer_email, id, status)
-          .catch(err => console.error("Failed to send status update email", err));
+
+    const oldStatus = currentOrder[0].status;
+
+    // Restore stock if changing to cancelled
+    if (oldStatus !== 'cancelled' && status === 'cancelled') {
+      const [items] = await connection.query('SELECT product_id, quantity FROM order_items WHERE order_id = ?', [id]);
+      for (const item of items) {
+        await connection.query('UPDATE products SET stock = stock + ? WHERE id = ?', [item.quantity, item.product_id]);
       }
+    } 
+    // Deduct stock if un-cancelling
+    else if (oldStatus === 'cancelled' && status !== 'cancelled') {
+      const [items] = await connection.query('SELECT product_id, quantity FROM order_items WHERE order_id = ?', [id]);
+      for (const item of items) {
+        await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [item.quantity, item.product_id]);
+      }
+    }
+
+    await connection.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+
+    await connection.commit();
+
+    // If status is shipping or delivered, send email
+    if (['shipping', 'delivered'].includes(status) && currentOrder[0].customer_email) {
+      emailService.sendOrderStatusUpdate(currentOrder[0].customer_email, id, status)
+        .catch(err => console.error("Failed to send status update email", err));
     }
 
     res.json({
@@ -198,8 +220,12 @@ exports.updateOrderStatus = async (req, res) => {
       data: { id, status }
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: 'Server error', data: null });
+    await connection.rollback();
+    console.error('Update order status failed:', error);
+    const statusCode = error.message === 'Order not found' ? 404 : 500;
+    res.status(statusCode).json({ success: false, message: error.message || 'Server error', data: null });
+  } finally {
+    connection.release();
   }
 };
 
@@ -233,8 +259,8 @@ exports.cancelMyOrder = async (req, res) => {
       throw new Error('Order not found or unauthorized');
     }
 
-    if (orders[0].status !== 'pending') {
-      throw new Error('Only pending orders can be cancelled');
+    if (orders[0].status !== 'pending' && orders[0].status !== 'preparing') {
+      throw new Error('Only pending or preparing orders can be cancelled');
     }
 
     // Restore stock

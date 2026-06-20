@@ -15,11 +15,61 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_email: '',
-    customer_phone: '',
-    customer_address: ''
+    customer_phone: ''
   });
+  
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+
+  const [selectedProvince, setSelectedProvince] = useState({ code: '', name: '' });
+  const [selectedDistrict, setSelectedDistrict] = useState({ code: '', name: '' });
+  const [selectedWard, setSelectedWard] = useState({ code: '', name: '' });
+  const [streetAddress, setStreetAddress] = useState('');
+
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [submitting, setSubmitting] = useState(false);
+
+  // Fetch Provinces
+  useEffect(() => {
+    fetch('https://provinces.open-api.vn/api/p/')
+      .then(res => res.json())
+      .then(data => setProvinces(data))
+      .catch(err => console.error(err));
+  }, []);
+
+  // Fetch Districts when Province changes
+  useEffect(() => {
+    if (selectedProvince.code) {
+      fetch(`https://provinces.open-api.vn/api/p/${selectedProvince.code}?depth=2`)
+        .then(res => res.json())
+        .then(data => {
+          setDistricts(data.districts || []);
+          setWards([]);
+          setSelectedDistrict({ code: '', name: '' });
+          setSelectedWard({ code: '', name: '' });
+        })
+        .catch(err => console.error(err));
+    } else {
+      setDistricts([]);
+      setWards([]);
+    }
+  }, [selectedProvince.code]);
+
+  // Fetch Wards when District changes
+  useEffect(() => {
+    if (selectedDistrict.code) {
+      fetch(`https://provinces.open-api.vn/api/d/${selectedDistrict.code}?depth=2`)
+        .then(res => res.json())
+        .then(data => {
+          setWards(data.wards || []);
+          setSelectedWard({ code: '', name: '' });
+        })
+        .catch(err => console.error(err));
+    } else {
+      setWards([]);
+    }
+  }, [selectedDistrict.code]);
 
   // Pre-fill if logged in
   useEffect(() => {
@@ -27,9 +77,11 @@ const Checkout = () => {
       setFormData({
         customer_name: user.name || '',
         customer_email: user.email || '',
-        customer_phone: user.phone || '',
-        customer_address: user.address || ''
+        customer_phone: user.phone || ''
       });
+      if (user.address) {
+        setStreetAddress(user.address);
+      }
     }
   }, [user]);
 
@@ -44,7 +96,15 @@ const Checkout = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!selectedProvince.name || !selectedDistrict.name || !selectedWard.name || !streetAddress.trim()) {
+      toast.error('Vui lòng điền đầy đủ địa chỉ nhận hàng.');
+      return;
+    }
+
     setSubmitting(true);
+
+    const fullAddress = `${streetAddress.trim()}, ${selectedWard.name}, ${selectedDistrict.name}, ${selectedProvince.name}`;
 
     const items = cart.map(item => ({
       product_id: item.product.id,
@@ -54,6 +114,7 @@ const Checkout = () => {
     try {
       const res = await api.post('/orders', {
         ...formData,
+        customer_address: fullAddress,
         items,
         payment_method: paymentMethod
       });
@@ -61,19 +122,19 @@ const Checkout = () => {
       if (res.data.success) {
         const orderId = res.data.data.order_id;
         
-        if (paymentMethod === 'stripe') {
-          // Initialize Stripe Checkout
+        if (paymentMethod === 'vnpay') {
+          // Initialize VNPay Checkout
           try {
-            const stripeRes = await api.post('/payment/create', { order_id: orderId });
-            if (stripeRes.data.success && stripeRes.data.url) {
-              window.location.href = stripeRes.data.url;
+            const vnpayRes = await api.post('/payment/vnpay/create', { order_id: orderId });
+            if (vnpayRes.data.success && vnpayRes.data.url) {
+              window.location.href = vnpayRes.data.url;
               return; // Halt further execution, user is redirecting
             } else {
               toast.error('Failed to initialize payment. Proceeding as COD.');
             }
-          } catch (stripeErr) {
-            console.error('Stripe error:', stripeErr);
-            toast.error('Stripe not configured properly. Order placed as COD.');
+          } catch (vnpayErr) {
+            console.error('VNPay error:', vnpayErr);
+            toast.error('VNPay not configured properly. Order placed as COD.');
           }
         }
         
@@ -96,7 +157,7 @@ const Checkout = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Form */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+          <div className="bg-white p-8 rounded-3xl shadow-md border-2 border-slate-300 shadow-md ring-1 ring-slate-200">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Shipping Details</h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -108,7 +169,7 @@ const Checkout = () => {
                   name="customer_name"
                   value={formData.customer_name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   placeholder="John Doe"
                 />
               </div>
@@ -121,7 +182,7 @@ const Checkout = () => {
                   name="customer_email"
                   value={formData.customer_email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   placeholder="john@example.com"
                 />
               </div>
@@ -134,21 +195,69 @@ const Checkout = () => {
                   name="customer_phone"
                   value={formData.customer_phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                   placeholder="+1 (555) 000-0000"
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Shipping Address</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <select
+                    required
+                    value={selectedProvince.code}
+                    onChange={(e) => setSelectedProvince({ 
+                      code: e.target.value, 
+                      name: e.target.options[e.target.selectedIndex].text 
+                    })}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-white"
+                  >
+                    <option value="" disabled>Tỉnh/Thành phố</option>
+                    {provinces.map(p => (
+                      <option key={p.code} value={p.code}>{p.name}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    required
+                    disabled={!selectedProvince.code}
+                    value={selectedDistrict.code}
+                    onChange={(e) => setSelectedDistrict({ 
+                      code: e.target.value, 
+                      name: e.target.options[e.target.selectedIndex].text 
+                    })}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-white disabled:bg-slate-100"
+                  >
+                    <option value="" disabled>Quận/Huyện</option>
+                    {districts.map(d => (
+                      <option key={d.code} value={d.code}>{d.name}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    required
+                    disabled={!selectedDistrict.code}
+                    value={selectedWard.code}
+                    onChange={(e) => setSelectedWard({ 
+                      code: e.target.value, 
+                      name: e.target.options[e.target.selectedIndex].text 
+                    })}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all bg-white disabled:bg-slate-100"
+                  >
+                    <option value="" disabled>Phường/Xã</option>
+                    {wards.map(w => (
+                      <option key={w.code} value={w.code}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <textarea 
                   required
-                  name="customer_address"
-                  value={formData.customer_address}
-                  onChange={handleChange}
-                  rows="3"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  placeholder="123 Commerce St, City, Country, ZIP"
+                  value={streetAddress}
+                  onChange={(e) => setStreetAddress(e.target.value)}
+                  rows="2"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  placeholder="Số nhà, Tên đường..."
                 ></textarea>
               </div>
 
@@ -163,11 +272,11 @@ const Checkout = () => {
                     <span className="font-semibold text-sm text-center">Cash on Delivery</span>
                   </div>
                   <div 
-                    onClick={() => setPaymentMethod('stripe')}
-                    className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'stripe' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-500 hover:border-primary/50'}`}
+                    onClick={() => setPaymentMethod('vnpay')}
+                    className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'vnpay' ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 text-gray-500 hover:border-primary/50'}`}
                   >
                     <CreditCard size={32} />
-                    <span className="font-semibold text-sm text-center">Pay Online (Stripe)</span>
+                    <span className="font-semibold text-sm text-center">Thanh toán online (VNPay)</span>
                   </div>
                 </div>
               </div>
@@ -184,7 +293,7 @@ const Checkout = () => {
 
           {/* Summary */}
           <div>
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
+            <div className="bg-white p-8 rounded-3xl shadow-md border-2 border-slate-300 shadow-md ring-1 ring-slate-200 sticky top-24">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Items</h2>
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                 {cart.map(item => {

@@ -66,9 +66,9 @@ const Categories = () => {
     e.preventDefault();
     try {
       if (isEditMode) {
-        await api.put(`/categories/${formData.id}`, formData);
+        await api.put(`/admin/categories/${formData.id}`, formData);
       } else {
-        await api.post('/categories', formData);
+        await api.post('/admin/categories', formData);
       }
       setIsModalOpen(false);
       fetchCategories(); // Refresh
@@ -86,7 +86,7 @@ const Categories = () => {
   const confirmDelete = async () => {
     if (!categoryToDelete) return;
     try {
-      await api.delete(`/categories/${categoryToDelete._id || categoryToDelete.id}`);
+      await api.delete(`/admin/categories/${categoryToDelete._id || categoryToDelete.id}`);
       fetchCategories();
     } catch (err) {
       console.error("Failed to delete category", err);
@@ -134,7 +134,7 @@ const Categories = () => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-md border border-slate-300">
         <h2 className="text-lg font-semibold text-slate-800 hidden md:block">Categories</h2>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">

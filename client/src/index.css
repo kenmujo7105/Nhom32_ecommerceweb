@@ -5,6 +5,14 @@
   --color-primary-dark: #2563eb;
 }
 
+@layer base {
+  *, ::before, ::after {
+    border-width: 0;
+    border-style: solid;
+    border-color: #e5e7eb;
+  }
+}
+
 /* Premium modern e-commerce base styles */
 :root {
   --primary: #3b82f6;

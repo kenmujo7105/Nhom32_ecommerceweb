@@ -22,7 +22,7 @@ const Products = () => {
   // Form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [formData, setFormData] = useState({ id: null, name: '', price: '', category_id: '', image: '', description: '', stock: '' });
+  const [formData, setFormData] = useState({ id: null, name: '', price: '', sale_price: '', category_id: '', image: '', description: '', stock: '' });
 
   // Delete state
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -81,6 +81,7 @@ const Products = () => {
         id: product._id || product.id, 
         name: product.name, 
         price: product.price, 
+        sale_price: product.sale_price || '',
         category_id: product.category_id || '', 
         image: product.image || product.imageUrl || '', 
         description: product.description || '',
@@ -88,7 +89,7 @@ const Products = () => {
       });
     } else {
       setIsEditMode(false);
-      setFormData({ id: null, name: '', price: '', category_id: '', image: '', description: '', stock: '' });
+      setFormData({ id: null, name: '', price: '', sale_price: '', category_id: '', image: '', description: '', stock: '' });
     }
     setIsModalOpen(true);
   };
@@ -97,9 +98,9 @@ const Products = () => {
     e.preventDefault();
     try {
       if (isEditMode) {
-        await api.put(`/products/${formData.id}`, formData);
+        await api.put(`/admin/products/${formData.id}`, formData);
       } else {
-        await api.post('/products', formData);
+        await api.post('/admin/products', formData);
       }
       setIsModalOpen(false);
       fetchProducts(); // Refresh
@@ -117,7 +118,7 @@ const Products = () => {
   const confirmDelete = async () => {
     if (!productToDelete) return;
     try {
-      await api.delete(`/products/${productToDelete._id || productToDelete.id}`);
+      await api.delete(`/admin/products/${productToDelete._id || productToDelete.id}`);
       fetchProducts();
     } catch (err) {
       console.error("Failed to delete product", err);
@@ -132,11 +133,6 @@ const Products = () => {
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          <img 
-            src={row.image || row.imageUrl || 'https://via.placeholder.com/40'} 
-            alt={row.name} 
-            className="w-10 h-10 rounded-md object-cover border border-slate-200"
-          />
           <div>
             <div className="font-medium text-slate-800">{row.name}</div>
             <div className="text-xs text-slate-500 truncate max-w-[200px]">{row.description}</div>
@@ -178,7 +174,7 @@ const Products = () => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-md border border-slate-300">
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           {/* Search */}
           <div className="relative">
@@ -248,16 +244,25 @@ const Products = () => {
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Price ($)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Original Price (đ)</label>
               <input 
                 type="number" 
-                step="0.01"
                 required
                 value={formData.price}
                 onChange={e => setFormData({...formData, price: e.target.value})}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Sale Price (đ)</label>
+              <input 
+                type="number" 
+                value={formData.sale_price}
+                onChange={e => setFormData({...formData, sale_price: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                placeholder="Optional"
               />
             </div>
             <div>
@@ -298,7 +303,7 @@ const Products = () => {
             />
             {formData.image && (
               <div className="mt-2">
-                <img src={formData.image} alt="Preview" className="h-20 rounded-md border border-slate-200 object-cover" onError={(e) => e.target.style.display = 'none'} />
+                <img src={formData.image} alt="Preview" className="h-20 rounded-md border border-slate-300 object-cover" onError={(e) => e.target.style.display = 'none'} />
               </div>
             )}
           </div>

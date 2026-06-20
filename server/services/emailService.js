@@ -99,9 +99,45 @@ const sendPasswordResetCode = async (email, code) => {
   return sendEmail(email, 'Password Reset Code', html);
 };
 
+const sendRegistrationCode = async (email, code) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+      <h2 style="color: #4f46e5; text-align: center;">Verify Your Email Address</h2>
+      <p>Thank you for registering! Use the code below to verify your email address and complete your registration. <strong>This code is only valid for the next 15 minutes.</strong></p>
+      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b;">${code}</span>
+      </div>
+      <p>If you did not register for an account, please ignore this email.</p>
+      <p style="margin-top: 30px; font-size: 12px; color: #64748b; text-align: center;">
+        &copy; ${new Date().getFullYear()} E-Commerce. All rights reserved.
+      </p>
+    </div>
+  `;
+  return sendEmail(email, 'Email Verification Code', html);
+};
+
+const sendPasswordChangeVerificationCode = async (email, code) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px;">
+      <h2 style="color: #4f46e5; text-align: center;">Verify Password Change</h2>
+      <p>We received a request to change the password for your account. Use the code below to verify this action. <strong>This code is only valid for the next 15 minutes.</strong></p>
+      <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1e293b;">${code}</span>
+      </div>
+      <p>If you did not request this change, please ignore this email and your password will remain unchanged.</p>
+      <p style="margin-top: 30px; font-size: 12px; color: #64748b; text-align: center;">
+        &copy; ${new Date().getFullYear()} E-Commerce. All rights reserved.
+      </p>
+    </div>
+  `;
+  return sendEmail(email, 'Verify Password Change', html);
+};
+
 module.exports = {
   sendEmail,
   sendOrderConfirmation,
   sendOrderStatusUpdate,
-  sendPasswordResetCode
+  sendPasswordResetCode,
+  sendRegistrationCode,
+  sendPasswordChangeVerificationCode
 };

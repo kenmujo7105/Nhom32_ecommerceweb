@@ -36,8 +36,12 @@ services:
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - VNP_TMNCODE=${VNP_TMNCODE}
+      - VNP_HASHSECRET=${VNP_HASHSECRET}
+      - VNP_URL=${VNP_URL}
+      - VNP_RETURNURL=${VNP_RETURNURL}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - TZ=Asia/Ho_Chi_Minh
 
     depends_on:
       - db

@@ -95,7 +95,7 @@ const Dashboard = () => {
 };
 
 const StatCard = ({ title, value, icon, trend, trendUp }) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group hover:shadow-md transition-shadow">
+  <div className="bg-white p-6 rounded-2xl shadow-md border border-slate-300 flex flex-col relative overflow-hidden group hover:shadow-md transition-shadow">
     <div className="absolute -right-6 -top-6 text-slate-50 opacity-50 group-hover:scale-110 transition-transform duration-300">
       {React.cloneElement(icon, { size: 100 })}
     </div>
@@ -121,7 +121,7 @@ const SmallCard = ({ title, value, color }) => {
     indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     rose: 'bg-rose-50 text-rose-600 border-rose-200',
-    slate: 'bg-slate-50 text-slate-600 border-slate-200',
+    slate: 'bg-slate-50 text-slate-600 border-slate-300',
   };
   
   return (

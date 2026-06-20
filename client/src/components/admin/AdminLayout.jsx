@@ -96,7 +96,7 @@ const AdminLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-gray-200 z-10 shadow-sm">
+        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-gray-200 z-10 shadow-md">
           <div className="flex items-center gap-4">
             <button 
               className="lg:hidden text-gray-500 hover:text-gray-700"

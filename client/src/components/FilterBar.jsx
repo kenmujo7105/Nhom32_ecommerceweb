@@ -83,7 +83,7 @@ const FilterBar = ({ filters, setFilters }) => {
   };
 
   return (
-    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8">
+    <div className="bg-white p-4 rounded-2xl shadow-md border-2 border-slate-300 shadow-md ring-1 ring-slate-200 mb-8">
       <form onSubmit={handleSearchSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           
@@ -95,13 +95,13 @@ const FilterBar = ({ filters, setFilters }) => {
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
               onFocus={() => { if (localSearch.trim().length > 1) setShowDropdown(true); }}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all relative z-10"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all relative z-10"
             />
             <Search className="absolute left-3 top-3 text-gray-400 z-20" size={18} />
             
             {/* Dropdown Suggestions */}
             {showDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-slate-300 shadow-md ring-1 ring-slate-200 z-50">
                 {isSearching ? (
                   <div className="p-4 text-gray-500 text-center text-sm font-medium">Searching...</div>
                 ) : suggestions.length > 0 ? (
@@ -149,7 +149,7 @@ const FilterBar = ({ filters, setFilters }) => {
               <select 
                 value={filters.category_id || ''}
                 onChange={handleCategoryChange}
-                className="pl-9 pr-8 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white min-w-[160px]"
+                className="pl-9 pr-8 py-2.5 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white min-w-[160px]"
               >
                 <option value="">All Categories</option>
                 {categories.map(cat => (
@@ -162,7 +162,7 @@ const FilterBar = ({ filters, setFilters }) => {
             <select 
               value={`${filters.sort_by || 'created_at'}-${filters.sort_order || 'DESC'}`}
               onChange={handleSortChange}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white min-w-[160px]"
+              className="px-4 py-2.5 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 appearance-none bg-white min-w-[160px]"
             >
               <option value="created_at-DESC">Newest Arrivals</option>
               <option value="price-ASC">Price: Low to High</option>
@@ -180,7 +180,7 @@ const FilterBar = ({ filters, setFilters }) => {
               placeholder="Min Price ($)" 
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              className="w-full sm:w-32 px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full sm:w-32 px-4 py-2 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               min="0"
             />
             <span className="text-gray-500">-</span>
@@ -189,7 +189,7 @@ const FilterBar = ({ filters, setFilters }) => {
               placeholder="Max Price ($)" 
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full sm:w-32 px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              className="w-full sm:w-32 px-4 py-2 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               min="0"
             />
           </div>

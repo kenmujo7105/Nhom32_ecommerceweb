@@ -97,7 +97,7 @@ const Users = () => {
     { 
       header: 'Role', 
       render: (row) => (
-        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${row.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${row.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-700 border-slate-300'}`}>
           {row.role === 'admin' ? <ShieldAlert size={12} /> : <Shield size={12} />}
           {row.role === 'admin' ? 'Admin' : 'User'}
         </span>
@@ -141,7 +141,7 @@ const Users = () => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-md border border-slate-300">
         <h2 className="text-lg font-semibold text-slate-800 hidden md:block">Customers</h2>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">

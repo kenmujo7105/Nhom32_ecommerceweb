@@ -170,7 +170,7 @@ const Admins = () => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-md border border-slate-300">
         <h2 className="text-lg font-semibold text-slate-800 hidden md:block">Staff / Admins</h2>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">

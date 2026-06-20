@@ -30,7 +30,7 @@ const Orders = () => {
     setLoading(true);
     try {
       // Pass params for pagination/search/filter
-      const res = await api.get('/orders', { 
+      const res = await api.get('/admin/orders', { 
         params: { page, search, status: statusFilter, sort_by: sortField, sort_order: sortOrder, limit: 10 } 
       });
       if (res.data && res.data.data) {
@@ -40,8 +40,8 @@ const Orders = () => {
         let filtered = [...res.data];
         if (search) {
           filtered = filtered.filter(o => 
-            o.customerName?.toLowerCase().includes(search.toLowerCase()) || 
-            o.customerPhone?.includes(search)
+            o.customer_name?.toLowerCase().includes(search.toLowerCase()) || 
+            o.customer_phone?.includes(search)
           );
         }
         if (statusFilter) filtered = filtered.filter(o => o.status === statusFilter);
@@ -57,7 +57,7 @@ const Orders = () => {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      await api.put(`/orders/${orderId}/status`, { status: newStatus });
+      await api.patch(`/admin/orders/${orderId}/status`, { status: newStatus });
       fetchOrders(); // Refresh table
       if (selectedOrder && selectedOrder._id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
@@ -71,7 +71,7 @@ const Orders = () => {
   const openOrderDetail = async (order) => {
     try {
       // Fetch full order details if needed, or use the row data
-      const res = await api.get(`/orders/${order._id || order.id}`);
+      const res = await api.get(`/admin/orders/${order._id || order.id}`);
       if (res.data && res.data.success) {
         setSelectedOrder(res.data.data);
       } else {
@@ -83,7 +83,7 @@ const Orders = () => {
     setIsModalOpen(true);
   };
 
-  const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+  const statusOptions = ['pending', 'preparing', 'shipping', 'delivered', 'cancelled', 'completed'];
 
   const columns = [
     { header: 'Order ID', field: '_id', render: (row) => <span className="font-medium text-slate-800">#{String(row._id || row.id).slice(-6).toUpperCase()}</span> },
@@ -91,13 +91,13 @@ const Orders = () => {
       header: 'Customer', 
       render: (row) => (
         <div>
-          <div className="font-medium text-slate-800">{row.customerName || 'N/A'}</div>
-          <div className="text-xs text-slate-500">{row.customerPhone || ''}</div>
+          <div className="font-medium text-slate-800">{row.customer_name || 'N/A'}</div>
+          <div className="text-xs text-slate-500">{row.customer_phone || ''}</div>
         </div>
       ) 
     },
-    { header: 'Date', field: 'created_at', sortable: true, render: (row) => <span className="text-slate-600">{new Date(row.createdAt || row.date || Date.now()).toLocaleDateString()}</span> },
-    { header: 'Total', field: 'total_price', sortable: true, render: (row) => <span className="font-medium">{formatCurrency(Number(row.total || row.totalAmount || 0))}</span> },
+    { header: 'Date', field: 'created_at', sortable: true, render: (row) => <span className="text-slate-600">{new Date(row.created_at || Date.now()).toLocaleDateString()}</span> },
+    { header: 'Total', field: 'total_price', sortable: true, render: (row) => <span className="font-medium">{formatCurrency(Number(row.total_price || 0))}</span> },
     { 
       header: 'Status', 
       field: 'status',
@@ -135,7 +135,7 @@ const Orders = () => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-xl shadow-md border border-slate-300">
         <h2 className="text-lg font-semibold text-slate-800 hidden md:block">Orders</h2>
         
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -195,16 +195,16 @@ const Orders = () => {
               <h4 className="text-sm font-semibold text-slate-800 mb-2 uppercase tracking-wide">Customer Information</h4>
               <div className="grid grid-cols-2 gap-y-2 text-sm">
                 <span className="text-slate-500">Name:</span>
-                <span className="font-medium text-slate-800">{selectedOrder.customerName || 'N/A'}</span>
+                <span className="font-medium text-slate-800">{selectedOrder.customer_name || 'N/A'}</span>
                 
                 <span className="text-slate-500">Phone:</span>
-                <span className="font-medium text-slate-800">{selectedOrder.customerPhone || 'N/A'}</span>
+                <span className="font-medium text-slate-800">{selectedOrder.customer_phone || 'N/A'}</span>
                 
                 <span className="text-slate-500">Email:</span>
-                <span className="font-medium text-slate-800">{selectedOrder.customerEmail || 'N/A'}</span>
+                <span className="font-medium text-slate-800">{selectedOrder.customer_email || 'N/A'}</span>
                 
                 <span className="text-slate-500">Address:</span>
-                <span className="font-medium text-slate-800">{selectedOrder.shippingAddress || 'N/A'}</span>
+                <span className="font-medium text-slate-800">{selectedOrder.customer_address || 'N/A'}</span>
               </div>
             </div>
 
@@ -213,7 +213,7 @@ const Orders = () => {
               <h4 className="text-sm font-semibold text-slate-800 mb-2 uppercase tracking-wide">Order Information</h4>
               <div className="grid grid-cols-2 gap-y-2 text-sm mb-4">
                 <span className="text-slate-500">Date:</span>
-                <span className="font-medium text-slate-800">{new Date(selectedOrder.createdAt || selectedOrder.date || Date.now()).toLocaleString()}</span>
+                <span className="font-medium text-slate-800">{new Date(selectedOrder.created_at || Date.now()).toLocaleString()}</span>
                 
                 <span className="text-slate-500">Status:</span>
                 <div><StatusBadge status={selectedOrder.status} /></div>
@@ -221,24 +221,23 @@ const Orders = () => {
 
               {/* Order Items */}
               <div className="mt-4">
-                <h5 className="text-xs font-semibold text-slate-500 mb-2 uppercase border-b border-slate-200 pb-1">Items</h5>
+                <h5 className="text-xs font-semibold text-slate-500 mb-2 uppercase border-b border-slate-300 pb-1">Items</h5>
                 <ul className="space-y-3">
-                  {(selectedOrder.items || selectedOrder.products || []).map((item, idx) => (
+                  {(selectedOrder.items || []).map((item, idx) => (
                     <li key={idx} className="flex justify-between items-center text-sm">
                       <div className="flex items-center gap-3">
-                        <img src={item.product?.image || item.image || 'https://via.placeholder.com/30'} alt="product" className="w-8 h-8 rounded object-cover" />
                         <div>
-                          <div className="font-medium text-slate-800">{item.product?.name || item.name || 'Product Name'}</div>
+                          <div className="font-medium text-slate-800">{item.product_name || 'Product'}</div>
                           <div className="text-xs text-slate-500">Qty: {item.quantity}</div>
                         </div>
                       </div>
-                      <span className="font-medium text-slate-800">{formatCurrency(Number(item.price * item.quantity))}</span>
+                      <span className="font-medium text-slate-800">{formatCurrency(Number(item.price_at_purchase * item.quantity))}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="border-t border-slate-200 mt-3 pt-3 flex justify-between items-center text-sm font-bold">
+                <div className="border-t border-slate-300 mt-3 pt-3 flex justify-between items-center text-sm font-bold">
                   <span>Total Amount</span>
-                  <span className="text-indigo-600 text-lg">{formatCurrency(Number(selectedOrder.total || selectedOrder.totalAmount || 0))}</span>
+                  <span className="text-indigo-600 text-lg">{formatCurrency(Number(selectedOrder.total_price || 0))}</span>
                 </div>
               </div>
             </div>
