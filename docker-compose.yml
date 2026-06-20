@@ -41,6 +41,7 @@ services:
       - VNP_URL=${VNP_URL}
       - VNP_RETURNURL=${VNP_RETURNURL}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - TZ=Asia/Ho_Chi_Minh
 
     depends_on:
