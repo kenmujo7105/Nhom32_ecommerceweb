@@ -285,15 +285,15 @@ exports.getUserPurchasedProducts = async (req, res) => {
       SELECT 
         p.id, 
         p.name, 
-        p.image, 
+        p.image_url as image, 
         oi.price_at_purchase as price, 
         SUM(oi.quantity) as total_quantity, 
         MAX(o.created_at) as last_purchased
       FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id
-      JOIN products p ON oi.product_id = p.id
+      JOIN orders o ON o.id = oi.order_id
+      JOIN products p ON p.id = oi.product_id
       WHERE o.user_id = ? AND o.status NOT IN ('cancelled')
-      GROUP BY p.id, p.name, p.image, oi.price_at_purchase
+      GROUP BY p.id, p.name, p.image_url, oi.price_at_purchase
       ORDER BY last_purchased DESC
     `;
     const [products] = await db.query(query, [id]);
