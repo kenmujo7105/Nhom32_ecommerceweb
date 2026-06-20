@@ -40,9 +40,12 @@ const Register = () => {
 
     try {
       const res = await api.post('/auth/register', formData);
-      if (res.data.success && res.data.data.registration_token) {
-        setRegistrationToken(res.data.data.registration_token);
+      console.log('Registration response:', res.data);
+      if (res.data?.success) {
+        setRegistrationToken(res.data.data?.registration_token || '');
         setStep(2);
+      } else {
+        setError(res.data?.message || 'Registration did not return success status.');
       }
     } catch (err) {
       if (err.response?.data?.data?.length > 0) {

@@ -40,7 +40,7 @@ const sendEmail = async (to, subject, html) => {
   try {
     const t = await getTransporter();
     const info = await t.sendMail({
-      from: '"E-Commerce Admin" <no-reply@ecommerce.com>',
+      from: `"E-Commerce Admin" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,
