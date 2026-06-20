@@ -17,10 +17,10 @@ exports.getUsers = async (req, res) => {
     const countParams = [];
 
     if (search) {
-      query += ' AND (name LIKE ? OR email LIKE ?)';
-      countQuery += ' AND (name LIKE ? OR email LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-      countParams.push(`%${search}%`, `%${search}%`);
+      query += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+      countQuery += ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     if (role) {
@@ -273,6 +273,37 @@ exports.updateAdmin = async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ success: false, message: 'Email already exists', data: null });
     }
+    res.status(500).json({ success: false, message: 'Server error', data: null });
+  }
+};
+
+// GET /api/admin/users/:id/products
+exports.getUserPurchasedProducts = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const query = `
+      SELECT 
+        p.id, 
+        p.name, 
+        p.image, 
+        oi.price_at_purchase as price, 
+        SUM(oi.quantity) as total_quantity, 
+        MAX(o.created_at) as last_purchased
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN products p ON oi.product_id = p.id
+      WHERE o.user_id = ? AND o.status NOT IN ('cancelled')
+      GROUP BY p.id, p.name, p.image, oi.price_at_purchase
+      ORDER BY last_purchased DESC
+    `;
+    const [products] = await db.query(query, [id]);
+    res.json({
+      success: true,
+      data: products,
+      message: 'Purchased products retrieved successfully'
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ success: false, message: 'Server error', data: null });
   }
 };

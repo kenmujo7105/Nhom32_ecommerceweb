@@ -14,6 +14,7 @@ const updateUserValidation = [
 router.get('/admin/roles', verifyToken, isAdmin, userController.getRoles);
 router.get('/admin/users', verifyToken, isAdmin, userController.getUsers);
 router.get('/admin/users/:id', verifyToken, isAdmin, userController.getUserById);
+router.get('/admin/users/:id/products', verifyToken, isAdmin, userController.getUserPurchasedProducts);
 router.patch('/admin/users/:id', verifyToken, isAdmin, updateUserValidation, userController.updateUser);
 router.delete('/admin/users/:id', verifyToken, isAdmin, userController.deleteUser);
 

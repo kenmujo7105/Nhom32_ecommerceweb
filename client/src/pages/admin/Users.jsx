@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Shield, ShieldAlert, Power, User, Filter, Trash2 } from 'lucide-react';
+import { Search, Shield, ShieldAlert, Power, User, Filter, Trash2, Package, X } from 'lucide-react';
 import api from '../../api/axios';
 import DataTable from '../../components/admin/DataTable';
 import StatusBadge from '../../components/admin/StatusBadge';
@@ -21,6 +21,11 @@ const Users = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [actionType, setActionType] = useState(null); // 'role' or 'status'
   const [targetUser, setTargetUser] = useState(null);
+
+  // Products Modal State
+  const [productsModalOpen, setProductsModalOpen] = useState(false);
+  const [userProducts, setUserProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -57,6 +62,23 @@ const Users = () => {
     setActionType(type);
     setTargetUser(user);
     setIsConfirmOpen(true);
+  };
+
+  const handleViewProducts = async (user) => {
+    setTargetUser(user);
+    setProductsModalOpen(true);
+    setProductsLoading(true);
+    setUserProducts([]);
+    try {
+      const res = await api.get(`/admin/users/${user._id || user.id}/products`);
+      if (res.data.success) {
+        setUserProducts(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user products", err);
+    } finally {
+      setProductsLoading(false);
+    }
   };
 
   const confirmAction = async () => {
@@ -118,6 +140,13 @@ const Users = () => {
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
           <button 
+            onClick={() => handleViewProducts(row)}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+            title="View Purchased Products"
+          >
+            <Package size={18} />
+          </button>
+          <button 
             onClick={() => handleActionClick('status', row)}
             className={`p-1.5 rounded-md transition-colors ${(row.is_active !== 0 && row.is_active !== false) ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
             title={(row.is_active !== 0 && row.is_active !== false) ? 'Deactivate User' : 'Activate User'}
@@ -161,7 +190,7 @@ const Users = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
-              placeholder="Search name or email..." 
+              placeholder="Search name, email, phone..." 
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-64 text-sm outline-none"
@@ -208,6 +237,66 @@ const Users = () => {
         confirmText={actionType === 'role' ? 'Confirm Role Change' : actionType === 'delete' ? 'Delete' : 'Confirm Status Change'}
         isDestructive={actionType === 'delete' || (actionType === 'status' && (targetUser?.is_active !== 0 && targetUser?.is_active !== false))}
       />
+
+      {/* Products Modal */}
+      {productsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800">
+                Purchased Products - <span className="text-indigo-600">{targetUser?.name}</span>
+              </h3>
+              <button 
+                onClick={() => setProductsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              {productsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                </div>
+              ) : userProducts.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <Package size={48} className="mx-auto text-slate-300 mb-4" />
+                  <p>This customer hasn't purchased any products yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {userProducts.map((product, idx) => (
+                    <div key={idx} className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-indigo-200 hover:bg-indigo-50/50 transition-colors">
+                      <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-slate-800 truncate">{product.name}</h4>
+                        <div className="text-sm text-slate-500 mt-1">
+                          Last purchased: {new Date(product.last_purchased).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-slate-800">
+                          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                        </div>
+                        <div className="text-sm font-medium text-emerald-600 mt-1">
+                          Quantity: {product.total_quantity}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
