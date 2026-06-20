@@ -236,6 +236,21 @@ exports.getMyOrders = async (req, res) => {
   const user_id = req.user.id;
   try {
     const [orders] = await db.query('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [user_id]);
+    
+    if (orders.length > 0) {
+      const orderIds = orders.map(o => o.id);
+      const [items] = await db.query(`
+        SELECT oi.*, p.name as product_name, p.image_url 
+        FROM order_items oi 
+        JOIN products p ON oi.product_id = p.id 
+        WHERE oi.order_id IN (?)
+      `, [orderIds]);
+
+      orders.forEach(order => {
+        order.items = items.filter(item => item.order_id === order.id);
+      });
+    }
+
     res.json({
       success: true,
       data: orders,

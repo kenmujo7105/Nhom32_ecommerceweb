@@ -1,7 +1,7 @@
 import { formatCurrency } from '../utils/formatters';
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Package, Save, XCircle } from 'lucide-react';
+import { Loader2, Package, Save, XCircle, Star } from 'lucide-react';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -252,11 +252,32 @@ const Profile = () => {
                   {orders.map(order => (
                     <div key={order.id} className="border-2 border-slate-300 shadow-md ring-1 ring-slate-200 rounded-2xl p-6 hover:shadow-md transition-shadow">
                       <div className="flex flex-wrap justify-between items-start gap-4">
-                        <div>
+                        <div className="flex-1">
                           <p className="text-sm text-gray-500 mb-1">Order #{order.id}</p>
                           <p className="text-sm text-gray-500">{new Date(order.created_at).toLocaleDateString()}</p>
+                          
+                          {/* Order Items List */}
+                          <div className="mt-4 border-t border-gray-100 pt-3 space-y-3">
+                            {order.items && order.items.map(item => (
+                              <div key={item.id} className="flex justify-between items-center gap-4 bg-gray-50 p-2 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  {item.image_url && <img src={item.image_url} alt={item.product_name} className="w-10 h-10 object-cover rounded" />}
+                                  <span className="text-sm font-medium text-gray-700">{item.product_name} <span className="text-gray-400">x{item.quantity}</span></span>
+                                </div>
+                                {(order.status?.toLowerCase() === 'completed' || order.status?.toLowerCase() === 'delivered') && (
+                                  <button 
+                                    onClick={() => navigate(`/products/${item.product_id}`)}
+                                    className="flex items-center gap-1 text-xs bg-gray-900 text-white px-3 py-1.5 rounded-full hover:bg-black transition-colors shrink-0"
+                                  >
+                                    <Star size={12} className="fill-white" /> Đánh giá
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
                         </div>
-                        <div className="text-right flex flex-col items-end gap-2">
+                        <div className="text-right flex flex-col items-end gap-2 shrink-0">
                           <div>
                             <p className="font-bold text-gray-900 text-lg">{formatCurrency(parseFloat(order.total_price))}</p>
                             <span className={`inline-block px-3 py-1 mt-2 rounded-full text-xs font-bold uppercase
