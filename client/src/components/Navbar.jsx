@@ -32,7 +32,7 @@ const Navbar = () => {
 
             {user ? (
               <div className="flex items-center space-x-4">
-                {(user?.role === 'admin' || user?.role === 'Admin') && (
+                {(user?.role === 'admin' || user?.role === 'Admin' || user?.role === 'superadmin') && (
                   <Link to="/admin/dashboard" className="text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors font-bold text-sm flex items-center shadow-md">
                     ⚡ Admin Panel
                   </Link>

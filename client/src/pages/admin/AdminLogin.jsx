@@ -24,7 +24,7 @@ const AdminLogin = () => {
         const loggedUser = res.data.data.user;
         const token = res.data.data.token;
         
-        if (loggedUser.role !== 'admin') {
+        if (loggedUser.role !== 'admin' && loggedUser.role !== 'superadmin') {
           throw new Error("You do not have permission to access the admin portal.");
         }
         

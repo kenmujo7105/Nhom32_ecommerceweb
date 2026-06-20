@@ -14,7 +14,7 @@ const AdminRoute = ({ children }) => {
   }
 
   // If no token or not admin, redirect to login
-  if (!token || !user || user.role !== 'admin') {
+  if (!token || !user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return <Navigate to="/admin/login" replace />;
   }
 

@@ -27,7 +27,7 @@ const Login = () => {
       if (res.data.success) {
         const loggedUser = res.data.data.user;
         login(res.data.data.token, loggedUser);
-        if (loggedUser.role === 'admin') {
+        if (loggedUser.role === 'admin' || loggedUser.role === 'superadmin') {
           navigate('/admin/dashboard');
         } else {
           navigate('/profile');
@@ -48,7 +48,7 @@ const Login = () => {
       if (res.data.success) {
         const loggedUser = res.data.data.user;
         login(res.data.data.token, loggedUser);
-        if (loggedUser.role === 'admin') {
+        if (loggedUser.role === 'admin' || loggedUser.role === 'superadmin') {
           navigate('/admin/dashboard');
         } else {
           navigate('/profile');
