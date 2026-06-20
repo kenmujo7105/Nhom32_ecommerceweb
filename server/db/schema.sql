@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     address TEXT,
-    role ENUM('customer', 'admin') DEFAULT 'customer',
+    role ENUM('customer', 'admin', 'superadmin') DEFAULT 'customer',
     is_active BOOLEAN DEFAULT TRUE,
     reset_code VARCHAR(10) NULL,
     reset_code_expiry DATETIME NULL,

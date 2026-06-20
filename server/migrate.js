@@ -48,6 +48,30 @@ async function runMigration() {
       console.log('Added stripe_session_id');
     } catch (e) { console.log('stripe_session_id likely exists', e.message); }
 
+    // Migration: Update role enum to include 'superadmin'
+    console.log('Running migration: Updating role enum...');
+    try {
+      await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('customer', 'admin', 'superadmin') DEFAULT 'customer'");
+      console.log('Role enum updated successfully.');
+    } catch (err) {
+      console.log('Role enum update skipped or failed:', err.message);
+    }
+
+    // Migration: Set the first admin to superadmin if no superadmin exists
+    console.log('Running migration: Assigning superadmin...');
+    try {
+      const [superadmins] = await connection.query("SELECT id FROM users WHERE role = 'superadmin'");
+      if (superadmins.length === 0) {
+        // Find the oldest admin and make them superadmin
+        await connection.query("UPDATE users SET role = 'superadmin' WHERE role = 'admin' ORDER BY id ASC LIMIT 1");
+        console.log('Assigned superadmin role to the first admin.');
+      } else {
+        console.log('Superadmin already exists.');
+      }
+    } catch (err) {
+      console.error('Failed to assign superadmin:', err.message);
+    }
+
     // Add rating to products
     try {
       await connection.query("ALTER TABLE products ADD COLUMN rating DECIMAL(3, 2) DEFAULT 0;");

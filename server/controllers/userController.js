@@ -24,10 +24,15 @@ exports.getUsers = async (req, res) => {
     }
 
     if (role) {
-      query += ' AND role = ?';
-      countQuery += ' AND role = ?';
-      params.push(role);
-      countParams.push(role);
+      if (role === 'admin') {
+        query += " AND role IN ('admin', 'superadmin')";
+        countQuery += " AND role IN ('admin', 'superadmin')";
+      } else {
+        query += ' AND role = ?';
+        countQuery += ' AND role = ?';
+        params.push(role);
+        countParams.push(role);
+      }
     }
 
     if (is_active !== undefined && is_active !== '') {
@@ -130,11 +135,33 @@ exports.updateUser = async (req, res) => {
 // DELETE /api/admin/users/:id
 exports.deleteUser = async (req, res) => {
   const { id } = req.params;
+  
   try {
-    const [result] = await db.query('DELETE FROM users WHERE id = ?', [id]);
-    if (result.affectedRows === 0) {
+    const [userToDelete] = await db.query('SELECT role FROM users WHERE id = ?', [id]);
+    if (userToDelete.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found', data: null });
     }
+    
+    const targetRole = userToDelete[0].role;
+    const currentRole = req.user.role;
+
+    // A user cannot delete themselves (including superadmin deleting themselves)
+    if (parseInt(id) === req.user.id) {
+      return res.status(403).json({ success: false, message: 'Cannot delete your own account', data: null });
+    }
+
+    // Only superadmin can delete an admin
+    if (targetRole === 'admin' && currentRole !== 'superadmin') {
+      return res.status(403).json({ success: false, message: 'Only Super Admin can delete admin accounts', data: null });
+    }
+
+    // No one can delete a superadmin
+    if (targetRole === 'superadmin') {
+      return res.status(403).json({ success: false, message: 'Super Admin account cannot be deleted', data: null });
+    }
+
+    const [result] = await db.query('DELETE FROM users WHERE id = ?', [id]);
+    
     res.json({
       success: true,
       data: null,
@@ -152,7 +179,7 @@ exports.deleteUser = async (req, res) => {
 exports.getRoles = (req, res) => {
   res.json({
     success: true,
-    data: ['customer', 'admin'],
+    data: ['customer', 'admin', 'superadmin'],
     message: 'Roles retrieved successfully'
   });
 };
@@ -218,9 +245,19 @@ exports.updateAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No valid fields to update', data: null });
     }
 
-    // Prevent demoting last admin or similar could be done here, but we just update
+    // Prevent updating a superadmin, or changing an admin if not superadmin
+    const [targetAdmin] = await db.query('SELECT role FROM users WHERE id = ?', [id]);
+    if (targetAdmin.length > 0) {
+      if (targetAdmin[0].role === 'superadmin' && req.user.id !== parseInt(id)) {
+        return res.status(403).json({ success: false, message: 'Cannot modify another Super Admin', data: null });
+      }
+      if (targetAdmin[0].role === 'admin' && req.user.role !== 'superadmin' && req.user.id !== parseInt(id)) {
+        return res.status(403).json({ success: false, message: 'Only Super Admin can modify other admins', data: null });
+      }
+    }
+
     params.push(id);
-    const [result] = await db.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ? AND role = 'admin'`, params);
+    const [result] = await db.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ? AND role IN ('admin', 'superadmin')`, params);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: 'Admin not found', data: null });

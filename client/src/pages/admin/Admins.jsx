@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ShieldAlert, Edit, Trash2, Plus, Power } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { Search, ShieldAlert, Edit, Trash2, Plus, Power, ShieldCheck } from 'lucide-react';
 import api from '../../api/axios';
+import { AuthContext } from '../../context/AuthContext';
 import DataTable from '../../components/admin/DataTable';
 import StatusBadge from '../../components/admin/StatusBadge';
 import ConfirmDialog from '../../components/admin/ConfirmDialog';
 import Modal from '../../components/admin/Modal';
 
 const Admins = () => {
+  const { user: currentUser } = useContext(AuthContext);
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -119,11 +121,16 @@ const Admins = () => {
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-200">
-            <ShieldAlert size={20} />
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${row.role === 'superadmin' ? 'bg-amber-100 text-amber-600 border-amber-200' : 'bg-indigo-100 text-indigo-600 border-indigo-200'}`}>
+            {row.role === 'superadmin' ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
           </div>
           <div>
-            <div className="font-medium text-slate-800">{row.name}</div>
+            <div className="font-medium text-slate-800 flex items-center gap-2">
+              {row.name}
+              {row.role === 'superadmin' && (
+                <span className="text-[10px] uppercase tracking-wider font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Super Admin</span>
+              )}
+            </div>
             <div className="text-xs text-slate-500">{row.email}</div>
           </div>
         </div>
@@ -139,31 +146,53 @@ const Admins = () => {
     { 
       header: 'Actions', 
       className: 'text-right',
-      render: (row) => (
-        <div className="flex items-center justify-end gap-2">
-          <button 
-            onClick={() => handleOpenModal(row)}
-            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-            title="Edit"
-          >
-            <Edit size={16} />
-          </button>
-          <button 
-            onClick={() => handleActionClick('status', row)}
-            className={`p-1.5 rounded-md transition-colors ${(row.is_active !== 0 && row.is_active !== false) ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-            title={(row.is_active !== 0 && row.is_active !== false) ? 'Deactivate Admin' : 'Activate Admin'}
-          >
-            <Power size={16} />
-          </button>
-          <button 
-            onClick={() => handleActionClick('delete', row)}
-            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      ) 
+      render: (row) => {
+        const isSelf = currentUser && (currentUser.id === row.id || currentUser.id === row._id);
+        const isSuperAdmin = currentUser?.role === 'superadmin';
+        const targetIsSuperAdmin = row.role === 'superadmin';
+        
+        // Rules:
+        // 1. Super admin can do anything except delete themselves.
+        // 2. Regular admins can edit themselves, but cannot edit/delete other admins.
+        
+        const canEdit = isSuperAdmin || isSelf;
+        const canToggleStatus = isSuperAdmin && !isSelf;
+        const canDelete = isSuperAdmin && !isSelf && !targetIsSuperAdmin;
+
+        if (!canEdit && !canToggleStatus && !canDelete) return <div className="text-right text-xs text-slate-400">Restricted</div>;
+
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {canEdit && (
+              <button 
+                onClick={() => handleOpenModal(row)}
+                className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                title="Edit"
+              >
+                <Edit size={16} />
+              </button>
+            )}
+            {canToggleStatus && (
+              <button 
+                onClick={() => handleActionClick('status', row)}
+                className={`p-1.5 rounded-md transition-colors ${(row.is_active !== 0 && row.is_active !== false) ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                title={(row.is_active !== 0 && row.is_active !== false) ? 'Deactivate Admin' : 'Activate Admin'}
+              >
+                <Power size={16} />
+              </button>
+            )}
+            {canDelete && (
+              <button 
+                onClick={() => handleActionClick('delete', row)}
+                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        );
+      } 
     }
   ];
 
@@ -186,12 +215,14 @@ const Admins = () => {
             />
           </div>
           
-          <button 
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
-          >
-            <Plus size={18} /> Add Admin
-          </button>
+          {currentUser?.role === 'superadmin' && (
+            <button 
+              onClick={() => handleOpenModal()}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
+            >
+              <Plus size={18} /> Add Admin
+            </button>
+          )}
         </div>
       </div>
 
