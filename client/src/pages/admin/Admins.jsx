@@ -153,9 +153,9 @@ const Admins = () => {
         
         // Rules:
         // 1. Super admin can do anything except delete themselves.
-        // 2. Regular admins can edit themselves, but cannot edit/delete other admins.
+        // 2. Regular admins cannot edit or delete ANY admin (including themselves via this page).
         
-        const canEdit = isSuperAdmin || isSelf;
+        const canEdit = isSuperAdmin;
         const canToggleStatus = isSuperAdmin && !isSelf;
         const canDelete = isSuperAdmin && !isSelf && !targetIsSuperAdmin;
 
