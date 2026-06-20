@@ -7,8 +7,14 @@ import api from '../api/axios';
 const FilterBar = ({ filters, setFilters }) => {
   const [categories, setCategories] = useState([]);
   const [localSearch, setLocalSearch] = useState(filters.search || '');
-  const [minPrice, setMinPrice] = useState(filters.min_price || '');
-  const [maxPrice, setMaxPrice] = useState(filters.max_price || '');
+  const [minPrice, setMinPrice] = useState(filters.min_price ? String(filters.min_price / 1000) : '');
+  const [maxPrice, setMaxPrice] = useState(filters.max_price ? String(filters.max_price / 1000) : '');
+
+  const formatNumberWithDot = (value) => {
+    if (!value) return '';
+    const numberString = value.toString().replace(/\D/g, '');
+    return numberString.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
   
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -70,7 +76,13 @@ const FilterBar = ({ filters, setFilters }) => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setFilters(prev => ({ ...prev, search: localSearch, min_price: minPrice, max_price: maxPrice, page: 1 }));
+    setFilters(prev => ({ 
+      ...prev, 
+      search: localSearch, 
+      min_price: minPrice ? parseInt(minPrice) * 1000 : '', 
+      max_price: maxPrice ? parseInt(maxPrice) * 1000 : '', 
+      page: 1 
+    }));
   };
 
   const handleCategoryChange = (e) => {
@@ -173,29 +185,36 @@ const FilterBar = ({ filters, setFilters }) => {
         </div>
 
         {/* Price Range */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="flex flex-col sm:flex-row gap-4 items-center flex-wrap mt-2">
+          <div className="text-gray-700 font-medium text-sm md:text-base whitespace-nowrap">
+            Hoặc nhập khoảng giá phù hợp với bạn:
+          </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <input 
-              type="number" 
-              placeholder="Min Price ($)" 
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              className="w-full sm:w-32 px-4 py-2 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-              min="0"
-            />
-            <span className="text-gray-500">-</span>
-            <input 
-              type="number" 
-              placeholder="Max Price ($)" 
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full sm:w-32 px-4 py-2 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-              min="0"
-            />
+            <div className="flex items-center w-full sm:w-40 px-3 py-2.5 rounded-xl border-2 border-slate-300 bg-white shadow-sm ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
+              <input 
+                type="text" 
+                value={formatNumberWithDot(minPrice)}
+                onChange={(e) => setMinPrice(e.target.value.replace(/\D/g, ''))}
+                className="w-full text-right outline-none bg-transparent font-medium text-gray-800"
+                placeholder="0"
+              />
+              <span className="text-slate-400 font-medium pointer-events-none">.000đ</span>
+            </div>
+            <span className="text-gray-500 font-bold">~</span>
+            <div className="flex items-center w-full sm:w-40 px-3 py-2.5 rounded-xl border-2 border-slate-300 bg-white shadow-sm ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
+              <input 
+                type="text" 
+                value={formatNumberWithDot(maxPrice)}
+                onChange={(e) => setMaxPrice(e.target.value.replace(/\D/g, ''))}
+                className="w-full text-right outline-none bg-transparent font-medium text-gray-800"
+                placeholder="0"
+              />
+              <span className="text-slate-400 font-medium pointer-events-none">.000đ</span>
+            </div>
           </div>
           <button 
             type="submit"
-            className="w-full sm:w-auto px-6 py-2 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors"
+            className="w-full sm:w-auto px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors shadow-md hover:shadow-lg"
           >
             Apply Filters
           </button>

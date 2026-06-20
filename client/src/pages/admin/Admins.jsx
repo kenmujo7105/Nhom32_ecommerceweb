@@ -58,7 +58,7 @@ const Admins = () => {
         name: admin.name, 
         email: admin.email,
         password: '', // Don't populate password
-        is_active: admin.is_active !== false ? 1 : 0
+        is_active: (admin.is_active !== 0 && admin.is_active !== false) ? 1 : 0
       });
     } else {
       setIsEditMode(false);
@@ -100,7 +100,7 @@ const Admins = () => {
     if (!targetAdmin) return;
     try {
       if (actionType === 'status') {
-        const currentStatus = targetAdmin.is_active !== false; 
+        const currentStatus = targetAdmin.is_active !== 0 && targetAdmin.is_active !== false;
         await api.put(`/admin/admins/${targetAdmin._id || targetAdmin.id}`, { is_active: !currentStatus ? 1 : 0 });
       } else if (actionType === 'delete') {
         await api.delete(`/admin/users/${targetAdmin._id || targetAdmin.id}`);
@@ -132,7 +132,7 @@ const Admins = () => {
     { 
       header: 'Status', 
       render: (row) => (
-        <StatusBadge status={row.is_active !== false ? 'Active' : 'Inactive'} />
+        <StatusBadge status={(row.is_active !== 0 && row.is_active !== false) ? 'Active' : 'Inactive'} />
       ) 
     },
     { header: 'Joined', field: 'created_at', sortable: true, render: (row) => <span className="text-slate-600">{new Date(row.createdAt || Date.now()).toLocaleDateString()}</span> },
@@ -150,8 +150,8 @@ const Admins = () => {
           </button>
           <button 
             onClick={() => handleActionClick('status', row)}
-            className={`p-1.5 rounded-md transition-colors ${row.is_active !== false ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-            title={row.is_active !== false ? 'Deactivate Admin' : 'Activate Admin'}
+            className={`p-1.5 rounded-md transition-colors ${(row.is_active !== 0 && row.is_active !== false) ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+            title={(row.is_active !== 0 && row.is_active !== false) ? 'Deactivate Admin' : 'Activate Admin'}
           >
             <Power size={16} />
           </button>
@@ -285,10 +285,10 @@ const Admins = () => {
         message={
           actionType === 'delete' 
             ? `Are you sure you want to completely remove ${targetAdmin?.name}? This action cannot be undone.` 
-            : `Are you sure you want to mark ${targetAdmin?.name} as ${targetAdmin?.is_active !== false ? 'INACTIVE' : 'ACTIVE'}?`
+            : `Are you sure you want to mark ${targetAdmin?.name} as ${(targetAdmin?.is_active !== 0 && targetAdmin?.is_active !== false) ? 'INACTIVE' : 'ACTIVE'}?`
         }
         confirmText={actionType === 'delete' ? 'Delete' : 'Confirm'}
-        isDestructive={actionType === 'delete' || targetAdmin?.is_active !== false}
+        isDestructive={actionType === 'delete' || (targetAdmin?.is_active !== 0 && targetAdmin?.is_active !== false)}
       />
     </div>
   );

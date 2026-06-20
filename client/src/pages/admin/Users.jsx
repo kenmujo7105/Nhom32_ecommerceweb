@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Shield, ShieldAlert, Power, User, Filter } from 'lucide-react';
+import { Search, Shield, ShieldAlert, Power, User, Filter, Trash2 } from 'lucide-react';
 import api from '../../api/axios';
 import DataTable from '../../components/admin/DataTable';
 import StatusBadge from '../../components/admin/StatusBadge';
@@ -67,8 +67,10 @@ const Users = () => {
         await api.patch(`/admin/users/${targetUser._id || targetUser.id}`, { role: newRole });
       } else if (actionType === 'status') {
         // Assume missing active field implies active
-        const currentStatus = targetUser.is_active !== false; 
+        const currentStatus = targetUser.is_active !== 0 && targetUser.is_active !== false; 
         await api.patch(`/admin/users/${targetUser._id || targetUser.id}`, { is_active: !currentStatus });
+      } else if (actionType === 'delete') {
+        await api.delete(`/admin/users/${targetUser._id || targetUser.id}`);
       }
       fetchUsers(); // Refresh
     } catch (err) {
@@ -106,7 +108,7 @@ const Users = () => {
     { 
       header: 'Status', 
       render: (row) => (
-        <StatusBadge status={row.is_active !== false ? 'Active' : 'Inactive'} />
+        <StatusBadge status={(row.is_active !== 0 && row.is_active !== false) ? 'Active' : 'Inactive'} />
       ) 
     },
     { header: 'Joined', field: 'created_at', sortable: true, render: (row) => <span className="text-slate-600">{new Date(row.createdAt || Date.now()).toLocaleDateString()}</span> },
@@ -117,10 +119,17 @@ const Users = () => {
         <div className="flex items-center justify-end gap-2">
           <button 
             onClick={() => handleActionClick('status', row)}
-            className={`p-1.5 rounded-md transition-colors ${row.is_active !== false ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
-            title={row.is_active !== false ? 'Deactivate User' : 'Activate User'}
+            className={`p-1.5 rounded-md transition-colors ${(row.is_active !== 0 && row.is_active !== false) ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'}`}
+            title={(row.is_active !== 0 && row.is_active !== false) ? 'Deactivate User' : 'Activate User'}
           >
             <Power size={18} />
+          </button>
+          <button 
+            onClick={() => handleActionClick('delete', row)}
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+            title="Delete User"
+          >
+            <Trash2 size={18} />
           </button>
         </div>
       ) 
@@ -132,8 +141,10 @@ const Users = () => {
     if (actionType === 'role') {
       const newRole = targetUser.role === 'admin' ? 'user' : 'admin';
       return `Are you sure you want to change ${targetUser.name}'s role to ${newRole.toUpperCase()}?`;
+    } else if (actionType === 'delete') {
+      return `Are you sure you want to completely remove ${targetUser.name}? This action cannot be undone.`;
     } else {
-      const newStatus = targetUser.is_active !== false ? 'inactive' : 'active';
+      const newStatus = (targetUser.is_active !== 0 && targetUser.is_active !== false) ? 'inactive' : 'active';
       return `Are you sure you want to mark ${targetUser.name} as ${newStatus.toUpperCase()}?`;
     }
   };
@@ -192,10 +203,10 @@ const Users = () => {
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={confirmAction}
-        title={actionType === 'role' ? 'Change User Role' : 'Toggle User Status'}
+        title={actionType === 'role' ? 'Change User Role' : actionType === 'delete' ? 'Delete User' : 'Toggle User Status'}
         message={getConfirmMessage()}
-        confirmText={actionType === 'role' ? 'Confirm Role Change' : 'Confirm Status Change'}
-        isDestructive={actionType === 'status' && targetUser?.is_active !== false}
+        confirmText={actionType === 'role' ? 'Confirm Role Change' : actionType === 'delete' ? 'Delete' : 'Confirm Status Change'}
+        isDestructive={actionType === 'delete' || (actionType === 'status' && (targetUser?.is_active !== 0 && targetUser?.is_active !== false))}
       />
     </div>
   );
