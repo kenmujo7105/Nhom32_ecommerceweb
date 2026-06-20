@@ -116,7 +116,7 @@ const Home = () => {
 
             {/* Dropdown Suggestions */}
             {showDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-slate-300 shadow-md ring-1 ring-slate-200 z-50">
                 {isSearching ? (
                   <div className="p-4 text-gray-500 text-center text-sm font-medium">Searching...</div>
                 ) : suggestions.length > 0 ? (

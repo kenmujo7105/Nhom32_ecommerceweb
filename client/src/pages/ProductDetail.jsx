@@ -205,7 +205,7 @@ const ProductDetail = () => {
               Product Description
             </h2>
           </div>
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm leading-relaxed text-gray-700 text-lg">
+          <div className="bg-white rounded-3xl p-8 border-2 border-slate-300 shadow-md ring-1 ring-slate-200 shadow-md leading-relaxed text-gray-700 text-lg">
             <p className="whitespace-pre-line mb-6">
               {product.description || "Discover the perfect blend of innovation and style with this premium product. Designed with meticulous attention to detail, it offers unparalleled performance and durability. Whether you're upgrading your lifestyle or looking for a reliable companion, this product exceeds expectations on every front."}
             </p>

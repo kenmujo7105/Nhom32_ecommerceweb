@@ -22,15 +22,15 @@ const DataTable = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-md border-2 border-slate-400 ring-1 ring-slate-300 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b border-slate-200">
+          <thead className="bg-slate-50 text-slate-700 text-xs uppercase font-semibold border-b-2 border-slate-400">
             <tr>
               {columns.map((col, index) => (
                 <th 
                   key={index} 
-                  className={`px-6 py-4 whitespace-nowrap select-none ${col.sortable && col.field ? 'cursor-pointer hover:bg-slate-100' : ''}`}
+                  className={`px-6 py-4 whitespace-nowrap select-none ${col.sortable && col.field ? 'cursor-pointer hover:bg-slate-100' : ''} ${index > 0 ? 'border-l-2 border-slate-400' : ''}`}
                   onClick={() => handleSortClick(col.field, col.sortable)}
                 >
                   <div className="flex items-center gap-1">
@@ -49,7 +49,7 @@ const DataTable = ({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y-2 divide-slate-400">
             {loading ? (
               <tr>
                 <td colSpan={columns.length} className="px-6 py-12 text-center">
@@ -60,7 +60,7 @@ const DataTable = ({
               data.map((row, rowIndex) => (
                 <tr key={row[keyField] || rowIndex} className="hover:bg-slate-50/80 transition-colors duration-150">
                   {columns.map((col, colIndex) => (
-                    <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`}>
+                    <td key={colIndex} className={`px-6 py-4 ${col.className || ''} ${colIndex > 0 ? 'border-l-2 border-slate-400' : ''}`}>
                       {col.render ? col.render(row) : row[col.field]}
                     </td>
                   ))}
@@ -78,7 +78,7 @@ const DataTable = ({
       </div>
       
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+        <div className="px-6 py-4 border-t-2 border-slate-400 bg-slate-50">
           <Pagination 
             currentPage={page} 
             totalPages={totalPages} 

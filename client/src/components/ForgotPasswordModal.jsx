@@ -94,7 +94,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                     type="email" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                     placeholder="Nhập email của bạn..."
                   />
                 </div>
@@ -129,7 +129,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                     type="text" 
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    className="w-full px-4 py-3 text-center tracking-widest text-lg font-bold rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-3 text-center tracking-widest text-lg font-bold rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     placeholder="------"
                     maxLength={6}
                   />
@@ -141,7 +141,7 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
                     type="password" 
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 shadow-md ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
                     minLength={6}
                   />

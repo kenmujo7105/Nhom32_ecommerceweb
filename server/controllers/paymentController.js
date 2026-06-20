@@ -1,7 +1,33 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const crypto = require('crypto');
 const db = require('../db');
 
-exports.createCheckoutSession = async (req, res) => {
+function sortObject(obj) {
+  let sorted = {};
+  let str = [];
+  let key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      str.push(encodeURIComponent(key));
+    }
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+  }
+  return sorted;
+}
+
+function formatVNPayDate(date) {
+  const yyyy = date.getFullYear().toString();
+  const MM = (date.getMonth() + 1).toString().padStart(2, '0');
+  const dd = date.getDate().toString().padStart(2, '0');
+  const HH = date.getHours().toString().padStart(2, '0');
+  const mm = date.getMinutes().toString().padStart(2, '0');
+  const ss = date.getSeconds().toString().padStart(2, '0');
+  return yyyy + MM + dd + HH + mm + ss;
+}
+
+exports.createVNPayUrl = async (req, res) => {
   try {
     const { order_id } = req.body;
     
@@ -12,63 +38,84 @@ exports.createCheckoutSession = async (req, res) => {
     }
     const order = orders[0];
 
-    // Fetch order items
-    const [items] = await db.query(`
-      SELECT oi.*, p.name as product_name 
-      FROM order_items oi 
-      JOIN products p ON oi.product_id = p.id 
-      WHERE oi.order_id = ?
-    `, [order_id]);
+    let ipAddr = req.headers['x-forwarded-for'] ||
+        req.connection?.remoteAddress ||
+        req.socket?.remoteAddress || '127.0.0.1';
 
-    const line_items = items.map(item => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.product_name,
-        },
-        unit_amount: Math.round(item.price_at_purchase * 100), // Stripe uses cents
-      },
-      quantity: item.quantity,
-    }));
+    let tmnCode = process.env.VNP_TMNCODE;
+    let secretKey = process.env.VNP_HASHSECRET;
+    let vnpUrl = process.env.VNP_URL;
+    let returnUrl = process.env.VNP_RETURNURL.replace('{orderId}', order_id);
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items,
-      mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}/order-success/${order_id}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/checkout`,
-      client_reference_id: String(order_id),
-      customer_email: order.customer_email || undefined,
-    });
+    let amount = Math.round(parseFloat(order.total_price)) * 100;
+    
+    let createDate = formatVNPayDate(new Date());
+    let expireDate = formatVNPayDate(new Date(Date.now() + 15 * 60 * 1000));
 
-    // Save session id to order
-    await db.query('UPDATE orders SET stripe_session_id = ? WHERE id = ?', [session.id, order_id]);
+    let vnp_Params = {};
+    vnp_Params['vnp_Version'] = '2.1.0';
+    vnp_Params['vnp_Command'] = 'pay';
+    vnp_Params['vnp_TmnCode'] = tmnCode;
+    vnp_Params['vnp_Locale'] = 'vn';
+    vnp_Params['vnp_CurrCode'] = 'VND';
+    vnp_Params['vnp_TxnRef'] = order_id + '_' + createDate;
+    vnp_Params['vnp_OrderInfo'] = 'Thanh toan don hang ' + order_id;
+    vnp_Params['vnp_OrderType'] = 'other';
+    vnp_Params['vnp_Amount'] = amount;
+    vnp_Params['vnp_ReturnUrl'] = returnUrl;
+    vnp_Params['vnp_IpAddr'] = ipAddr;
+    vnp_Params['vnp_CreateDate'] = createDate;
+    vnp_Params['vnp_ExpireDate'] = expireDate;
 
-    res.json({ success: true, url: session.url });
+    vnp_Params = sortObject(vnp_Params);
+
+    let signData = Object.keys(vnp_Params).map(key => `${key}=${vnp_Params[key]}`).join('&');
+    let hmac = crypto.createHmac("sha512", secretKey);
+    let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex"); 
+    vnp_Params['vnp_SecureHash'] = signed;
+    vnpUrl += '?' + Object.keys(vnp_Params).map(key => `${key}=${vnp_Params[key]}`).join('&');
+
+    // We can save the txnRef if we want, reusing stripe_session_id for simplicity as it's a varchar
+    await db.query("UPDATE orders SET stripe_session_id = ? WHERE id = ?", [vnp_Params['vnp_TxnRef'], order_id]);
+
+    res.json({ success: true, url: vnpUrl });
   } catch (error) {
-    console.error('Stripe checkout error:', error);
+    console.error('VNPay create error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-exports.verifyPayment = async (req, res) => {
+exports.vnpayReturn = async (req, res) => {
   try {
-    const { session_id } = req.body;
-    
-    // Validate session with Stripe
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-    
-    if (session.payment_status === 'paid') {
-      const order_id = session.client_reference_id;
-      // Mark order as paid
-      await db.query("UPDATE orders SET payment_status = 'paid' WHERE id = ? AND stripe_session_id = ?", [order_id, session_id]);
-      
-      return res.json({ success: true, message: 'Payment verified successfully' });
+    let vnp_Params = req.body;
+    let secureHash = vnp_Params['vnp_SecureHash'];
+
+    delete vnp_Params['vnp_SecureHash'];
+    delete vnp_Params['vnp_SecureHashType'];
+
+    vnp_Params = sortObject(vnp_Params);
+
+    let secretKey = process.env.VNP_HASHSECRET;
+    let signData = Object.keys(vnp_Params).map(key => `${key}=${vnp_Params[key]}`).join('&');
+    let hmac = crypto.createHmac("sha512", secretKey);
+    let signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");     
+
+    if(secureHash === signed){
+      if (vnp_Params['vnp_ResponseCode'] === '00') {
+         // Payment successful
+         const order_id = vnp_Params['vnp_TxnRef'].split('_')[0];
+         
+         await db.query("UPDATE orders SET payment_status = 'paid' WHERE id = ?", [order_id]);
+         
+         res.json({success: true, message: 'Payment verified successfully'});
+      } else {
+         res.status(400).json({success: false, message: 'Payment failed at gateway', code: vnp_Params['vnp_ResponseCode']});
+      }
+    } else {
+      res.status(400).json({success: false, message: 'Checksum failed'});
     }
-    
-    res.status(400).json({ success: false, message: 'Payment not successful' });
   } catch (error) {
-    console.error('Payment verification error:', error);
+    console.error('VNPay return error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
